@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">Review inventory</div>
+  <p class="subtitle">Quick check before we prepare your quote.</p>
+
+  {% if rooms and rooms|length > 0 %}
+    <div class="group">
+      <div class="invlist">
+        {% for r in rooms %}
+          <a class="invlink" href="/s/{{ token }}/room/{{ r.id }}">
+            <div class="invtop">
+              <div class="invroom">{{ r.name }}</div>
+              <div class="invmeta">{{ (r.photos|length) if r.photos else 0 }} photos</div>
+            </div>
+            <div class="invitems">
+              {% if r.items_text %}
+                {{ r.items_text }}
+              {% else %}
+                <span class="muted">No items yet — tap to scan.</span>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div class="group">
+      <div class="empty">
+        <div class="empty-title">No rooms yet</div>
+        <div class="empty-sub">Add a room to start scanning items.</div>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <form id="finishForm" method="post" action="/s/{{ token }}/review/finish"></form>
+      <button class="btn" type="submit" form="finishForm" {% if not rooms or rooms|length==0 %}disabled{% endif %}>
+        Get quote
+      </button>
+      {% if not rooms or rooms|length==0 %}
+        <div class="microhint" style="text-align:center; margin-top:8px;">Add at least one room to continue.</div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

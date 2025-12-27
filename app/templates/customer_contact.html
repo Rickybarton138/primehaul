@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">📧 Almost there!</div>
+  <p class="subtitle">Where should we send your confirmed quote?</p>
+
+  {% if request.query_params.get('err') == 'required' %}
+    <div class="group" style="background:rgba(255,77,79,.15); border-color:rgba(255,77,79,.3);">
+      <div style="color:#ff4d4f; font-weight:600; text-align:center;">Please provide your contact details</div>
+    </div>
+  {% endif %}
+
+  <form id="contactForm" method="post" action="/s/{{ token }}/submit-contact">
+    <div class="group">
+      <div style="margin-bottom:16px;">
+        <label for="customer_name" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px;">
+          Full Name <span style="color:#ff4d4f;">*</span>
+        </label>
+        <input
+          type="text"
+          id="customer_name"
+          name="customer_name"
+          value="{{ job.customer_name or '' }}"
+          required
+          placeholder="John Smith"
+          style="
+            width:100%;
+            padding:14px;
+            border-radius:12px;
+            border:1px solid var(--hair);
+            background:rgba(255,255,255,.04);
+            color:var(--text);
+            font-size:15px;
+            font-family:inherit;
+          "
+        />
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label for="customer_phone" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px;">
+          Mobile Number <span style="color:#ff4d4f;">*</span>
+        </label>
+        <input
+          type="tel"
+          id="customer_phone"
+          name="customer_phone"
+          value="{{ job.customer_phone or '' }}"
+          required
+          placeholder="07700 900000"
+          pattern="[0-9\s\-\+\(\)]+"
+          style="
+            width:100%;
+            padding:14px;
+            border-radius:12px;
+            border:1px solid var(--hair);
+            background:rgba(255,255,255,.04);
+            color:var(--text);
+            font-size:15px;
+            font-family:inherit;
+          "
+        />
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label for="customer_email" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px;">
+          Email Address <span style="color:#ff4d4f;">*</span>
+        </label>
+        <input
+          type="email"
+          id="customer_email"
+          name="customer_email"
+          value="{{ job.customer_email or '' }}"
+          required
+          placeholder="john@example.com"
+          style="
+            width:100%;
+            padding:14px;
+            border-radius:12px;
+            border:1px solid var(--hair);
+            background:rgba(255,255,255,.04);
+            color:var(--text);
+            font-size:15px;
+            font-family:inherit;
+          "
+        />
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        💡 We'll text you when your quote is approved (usually within 2 hours)
+      </div>
+    </div>
+
+    <div class="group">
+      <div style="text-align:center; padding:8px 0;">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:6px;">Your quote estimate</div>
+        <div style="font-size:28px; font-weight:800; letter-spacing:-.3px;">£{{ estimate_low }} – £{{ estimate_high }}</div>
+        <div style="font-size:13px; color:var(--muted); margin-top:4px;">{{ total_items }} items • {{ total_cbm }} m³</div>
+      </div>
+    </div>
+  </form>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <button id="submitBtn" class="btn ready" type="submit" form="contactForm">
+        ✓ Submit to PrimeHaul
+      </button>
+      <div class="microhint" style="text-align:center; margin-top:8px;">
+        Our team will review and confirm within 2 hours
+      </div>
+    </div>
+  </div>
+{% endblock %}

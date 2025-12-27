@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">💰 Your Quote</div>
+  <p class="subtitle">AI-powered estimate based on your photos. Final price confirmed by our team.</p>
+
+  <div class="group">
+    <div class="bigprice">£{{ estimate_low }} – £{{ estimate_high }}</div>
+    <div class="pill">{{ confidence }}</div>
+
+    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">
+      <div style="font-weight:700; margin-bottom:12px;">Move Summary</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="statrow">
+          <div class="staticon">📦</div>
+          <div class="statrow-text">
+            <span class="statrow-label">Total items</span>
+            <span class="statrow-value">{{ total_items }}</span>
+          </div>
+        </div>
+        <div class="statrow">
+          <div class="staticon">📐</div>
+          <div class="statrow-text">
+            <span class="statrow-label">Volume (CBM)</span>
+            <span class="statrow-value">{{ total_cbm }} m³</span>
+          </div>
+        </div>
+        <div class="statrow">
+          <div class="staticon">⚖️</div>
+          <div class="statrow-text">
+            <span class="statrow-label">Est. weight</span>
+            <span class="statrow-value">{{ total_weight_kg }} kg</span>
+          </div>
+        </div>
+        <div class="statrow">
+          <div class="staticon">🏋️</div>
+          <div class="statrow-text">
+            <span class="statrow-label">Bulky items</span>
+            <span class="statrow-value">{{ bulky_items }}</span>
+          </div>
+        </div>
+        {% if fragile_items > 0 %}
+        <div class="statrow">
+          <div class="staticon">⚠️</div>
+          <div class="statrow-text">
+            <span class="statrow-label">Fragile items</span>
+            <span class="statrow-value">{{ fragile_items }}</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">
+      <div style="font-weight:700; margin-bottom:12px;">Route</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="statrow">
+          <div class="staticon" style="background:rgba(46,229,157,.15);">
+            <span style="font-size:12px;">📍</span>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-bottom:3px;">Pickup</div>
+            <div style="font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ job.pickup.label if job.pickup else "Not set" }}</div>
+          </div>
+        </div>
+        <div class="statrow">
+          <div class="staticon" style="background:rgba(255,77,79,.15);">
+            <span style="font-size:12px;">📍</span>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-bottom:3px;">Delivery</div>
+            <div style="font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ job.dropoff.label if job.dropoff else "Not set" }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      {% if job.status == 'in_progress' %}
+        <form method="post" action="/s/{{ token }}/submit-quote">
+          <button class="btn" type="submit">✓ Submit to PrimeHaul</button>
+          <div class="microhint" style="text-align:center; margin-top:8px;">
+            Our team will review and confirm your final quote within 2 hours
+          </div>
+        </form>
+      {% elif job.status == 'awaiting_approval' %}
+        <div style="text-align:center;">
+          <div class="btn" style="opacity:.7; pointer-events:none; background:#ffa500; color:#000;">
+            ⏳ Awaiting Approval
+          </div>
+          <div class="microhint" style="margin-top:8px;">
+            We're reviewing your quote. You'll receive a text when it's ready!
+          </div>
+        </div>
+      {% elif job.status == 'approved' %}
+        <button class="btn" style="background:#00c853; color:#fff;">
+          ✓ Quote Approved - Book Now
+        </button>
+      {% endif %}
+      <a href="/s/{{ token }}/rooms" class="btn secondary" style="margin-top:10px;">
+        ← Add More Rooms
+      </a>
+    </div>
+  </div>
+{% endblock %}

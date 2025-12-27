@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
+# Uploaded files
+app/static/uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

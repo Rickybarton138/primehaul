@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">🏠 Property Type</div>
+  <p class="subtitle">What type of property are you moving from?</p>
+
+  <form id="propForm" method="post" action="/s/{{ token }}/property">
+    <input type="hidden" id="property_type" name="property_type" value="{{ property_type or '' }}"/>
+
+    <div class="tilegrid" role="group" aria-label="Property type">
+      <button class="tile {% if property_type == 'House' %}selected{% endif %}" type="button" data-value="House">
+        <div style="font-size:32px; margin-bottom:8px;">🏠</div>
+        <div class="tile-title">House</div>
+      </button>
+      <button class="tile {% if property_type == 'Flat' %}selected{% endif %}" type="button" data-value="Flat">
+        <div style="font-size:32px; margin-bottom:8px;">🏢</div>
+        <div class="tile-title">Flat/Apartment</div>
+      </button>
+      <button class="tile {% if property_type == 'Office' %}selected{% endif %}" type="button" data-value="Office">
+        <div style="font-size:32px; margin-bottom:8px;">💼</div>
+        <div class="tile-title">Office</div>
+      </button>
+      <button class="tile {% if property_type == 'Storage' %}selected{% endif %}" type="button" data-value="Storage">
+        <div style="font-size:32px; margin-bottom:8px;">📦</div>
+        <div class="tile-title">Storage Unit</div>
+      </button>
+    </div>
+
+    <div class="hint" style="margin-top:14px;">
+      💡 This helps us estimate access time and parking requirements
+    </div>
+  </form>
+
+  <script>
+    (function(){
+      const hidden = document.getElementById("property_type");
+      const tiles = document.querySelectorAll(".tile[data-value]");
+      const btn = document.getElementById("continueBtn");
+      const hint = document.getElementById("continueHint");
+
+      function updateButton() {
+        if (hidden.value) {
+          btn.disabled = false;
+          btn.classList.add("ready");
+          if (hint) hint.textContent = "Ready to go!";
+        } else {
+          btn.disabled = true;
+          btn.classList.remove("ready");
+          if (hint) hint.textContent = "Select a property type to continue";
+        }
+      }
+
+      tiles.forEach(function(t){
+        t.addEventListener("click", function(){
+          for (let i=0; i<tiles.length; i++) tiles[i].classList.remove("selected");
+          t.classList.add("selected");
+          hidden.value = t.getAttribute("data-value") || "";
+          updateButton();
+        });
+      });
+
+      // Prevent submit if no selection
+      btn.addEventListener("click", function(e) {
+        if (!hidden.value) {
+          e.preventDefault();
+          alert('Please select a property type');
+        }
+      });
+
+      updateButton();
+    })();
+  </script>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <button class="btn" id="continueBtn" type="submit" form="propForm">
+        ✓ Continue to Rooms
+      </button>
+      <div class="microhint" style="text-align:center; margin-top:8px;" id="continueHint">
+        Select a property type to continue
+      </div>
+    </div>
+  </div>
+{% endblock %}

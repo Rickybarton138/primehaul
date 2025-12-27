@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% set room_icons = {
+    "Living room": "🛋️",
+    "Bedroom": "🛏️",
+    "Kitchen": "🍳",
+    "Bathroom": "🚿",
+    "Dining room": "🍽️",
+    "Hallway": "🚪",
+    "Office": "💼",
+    "Garage": "🚗",
+    "Loft": "📦",
+    "Garden": "🌳",
+    "Other": "➕"
+  } %}
+  <div class="largetitle">{{ room_icons.get(room_name, "📦") }} {{ room_name }}</div>
+  <p class="subtitle">Take a few wide-angle photos. Our AI will automatically detect everything.</p>
+
+  <div id="liveToast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <div class="group">
+    <input id="photoInput" type="file" accept="image/*" capture="environment" multiple class="hidden" />
+
+    <button id="takeBtn" class="btn ready" type="button">📸 Take Photos</button>
+
+    <div id="uploadWrap" class="uploadwrap hidden" aria-live="polite">
+      <div class="uploadlabel" id="uploadLabel">Uploading…</div>
+      <div class="uploadbar"><div class="uploadfill" id="uploadFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="hint" style="margin-top:10px;">
+      💡 <strong>Pro tip:</strong> Start with a wide shot of the whole room, then add close-ups of any small items.
+    </div>
+  </div>
+
+  <div id="photosCard" class="group {% if not photos or photos|length==0 %}hidden{% endif %}">
+    <div class="rowhead">
+      <div class="rowtitle">Photos</div>
+      <div class="rowsub"><span id="photoCount">{{ photos|length if photos else 0 }}</span></div>
+    </div>
+    <div id="photoGrid" class="photogrid">
+      {% if photos %}
+        {% for p in photos %}
+          <div class="photo"><img class="photoimg" src="{{ p.url }}" alt="Photo" loading="lazy" /></div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="group" id="itemsCard">
+    <div class="rowhead">
+      <div class="rowtitle">✅ Items detected</div>
+      <div class="rowsub" id="itemsStatus">{{ items_json.get('items')|length if items_json and items_json.get('items') else 0 }} items</div>
+    </div>
+
+    <div id="itemsList" class="itemslist" style="margin-top:12px;">
+      {% if items_json and items_json.get('items') and items_json.get('items')|length > 0 %}
+        {% for item in items_json.get('items') %}
+          <div class="itemrow">
+            <div class="iteminfo">
+              <div class="itemname">{{ item.qty }}x {{ item.name }}</div>
+              {% if item.notes %}
+                <div class="itemnotes">{{ item.notes }}</div>
+              {% endif %}
+            </div>
+            {% if item.bulky %}
+              <span class="badge">Bulky</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty" id="emptyState">
+          <div class="empty-title">No items yet</div>
+          <div class="empty-sub">Take photos and our AI will detect everything automatically!</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const uploadUrl = "/s/{{ token }}/room/{{ room_id }}/upload-json";
+
+      const input = document.getElementById("photoInput");
+      const takeBtn = document.getElementById("takeBtn");
+
+      const wrap = document.getElementById("uploadWrap");
+      const fill = document.getElementById("uploadFill");
+      const label = document.getElementById("uploadLabel");
+
+      const toast = document.getElementById("liveToast");
+
+      const photosCard = document.getElementById("photosCard");
+      const photoGrid = document.getElementById("photoGrid");
+      const photoCount = document.getElementById("photoCount");
+
+      const itemsStatus = document.getElementById("itemsStatus");
+      const itemsList = document.getElementById("itemsList");
+
+      function showToast(msg){
+        toast.textContent = msg;
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 1500);
+      }
+
+      function setUploading(on){
+        if(on){
+          wrap.classList.remove("hidden");
+          fill.style.width = "0%";
+          label.textContent = "✨ Analyzing with AI...";
+          takeBtn.disabled = true;
+          takeBtn.classList.remove("ready");
+          takeBtn.textContent = "⏳ Analyzing...";
+        } else {
+          takeBtn.disabled = false;
+          takeBtn.classList.add("ready");
+          takeBtn.textContent = "📸 Take Photos";
+        }
+      }
+
+      function setProgress(pct){
+        const clamped = Math.max(0, Math.min(100, pct));
+        fill.style.width = clamped + "%";
+        label.textContent = clamped >= 100 ? "✨ Analyzing with AI..." : ("Uploading… " + clamped + "%");
+      }
+
+      function escapeHtml(s){
+        return (s || "").replace(/[&<>"']/g, (c) => ({
+          "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+        }[c]));
+      }
+
+      function renderPhotos(photos){
+        if(!photos || photos.length === 0) return;
+
+        photosCard.classList.remove("hidden");
+        photoCount.textContent = String(photos.length);
+
+        photoGrid.innerHTML = photos.map(p =>
+          `<div class="photo"><img class="photoimg" src="${escapeHtml(p.url)}" alt="Photo" loading="lazy"/></div>`
+        ).join("");
+      }
+
+      function renderItems(items){
+        if(!items || items.length === 0){
+          itemsList.innerHTML = '<div class="empty"><div class="empty-title">No items yet</div><div class="empty-sub">Take photos and our AI will detect everything automatically!</div></div>';
+          itemsStatus.textContent = "0 items";
+          return;
+        }
+
+        itemsStatus.textContent = items.length + " items";
+
+        itemsList.innerHTML = items.map(it => {
+          const name = escapeHtml(it.name || "");
+          const qty = Number(it.qty || 1);
+          const notes = escapeHtml(it.notes || "");
+          const bulky = it.bulky;
+
+          return `
+            <div class="itemrow">
+              <div class="iteminfo">
+                <div class="itemname">${qty}x ${name}</div>
+                ${notes ? `<div class="itemnotes">${notes}</div>` : ''}
+              </div>
+              ${bulky ? '<span class="badge">Bulky</span>' : ''}
+            </div>
+          `;
+        }).join("");
+      }
+
+      takeBtn.addEventListener("click", () => input.click());
+
+      input.addEventListener("change", async () => {
+        if (!input.files || input.files.length === 0) return;
+
+        // Show upload UI
+        setUploading(true);
+        itemsStatus.textContent = "Processing…";
+
+        const data = new FormData();
+        for (const f of input.files) data.append("photos", f);
+
+        try {
+          // Use XHR just for progress; fetch doesn't give upload progress easily.
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", uploadUrl, true);
+
+          xhr.upload.onprogress = function (evt) {
+            if (!evt.lengthComputable) return;
+            setProgress(Math.round((evt.loaded / evt.total) * 100));
+          };
+
+          xhr.onload = function () {
+            setUploading(false);
+
+            if (xhr.status < 200 || xhr.status >= 300) {
+              showToast("Upload failed");
+              return;
+            }
+
+            const payload = JSON.parse(xhr.responseText || "{}");
+            if (!payload.ok) {
+              showToast("Upload failed");
+              return;
+            }
+
+            renderPhotos(payload.photos || []);
+            renderItems((payload.items_json && payload.items_json.items) ? payload.items_json.items : []);
+            showToast("✅ Items detected!");
+          };
+
+          xhr.onerror = function () {
+            setUploading(false);
+            showToast("Upload failed");
+          };
+
+          xhr.send(data);
+        } catch (e) {
+          setUploading(false);
+          showToast("Upload failed");
+        } finally {
+          // allow uploading same file again
+          input.value = "";
+        }
+      });
+    })();
+  </script>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <a class="btn" href="/s/{{ token }}/rooms">✓ Done with this room</a>
+      <div class="microhint" style="text-align:center; margin-top:8px;">
+        You can always come back and add more photos later
+      </div>
+    </div>
+  </div>
+{% endblock %}

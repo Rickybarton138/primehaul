@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">Which rooms?</div>
+  <p class="subtitle">Just tap the rooms you're moving. We'll scan them for you.</p>
+
+  <div class="group">
+    <div class="chipgrid">
+      {% set room_icons = {
+        "Living room": "🛋️",
+        "Bedroom": "🛏️",
+        "Kitchen": "🍳",
+        "Bathroom": "🚿",
+        "Dining room": "🍽️",
+        "Hallway": "🚪",
+        "Office": "💼",
+        "Garage": "🚗",
+        "Loft": "📦",
+        "Garden": "🌳",
+        "Other": "➕"
+      } %}
+      {% for opt in ["Living room","Bedroom","Kitchen","Bathroom","Dining room","Hallway","Office","Garage","Loft","Garden","Other"] %}
+        <form method="post" action="/s/{{ token }}/rooms/add">
+          <input type="hidden" name="room_name" value="{{ opt }}" />
+          <button class="chip" type="submit">{{ room_icons[opt] }} {{ opt }}</button>
+        </form>
+      {% endfor %}
+    </div>
+
+    <div class="hint" style="margin-top:10px;">
+      💡 Add multiple rooms — just tap another room when you're ready.
+    </div>
+  </div>
+
+  {% if rooms and rooms|length > 0 %}
+    <div class="group">
+      <div class="rowhead">
+        <div class="rowtitle">Rooms added</div>
+        <div class="rowsub">{{ rooms|length }}</div>
+      </div>
+
+      <div class="invlist">
+        {% set room_icons = {
+          "Living room": "🛋️",
+          "Bedroom": "🛏️",
+          "Kitchen": "🍳",
+          "Bathroom": "🚿",
+          "Dining room": "🍽️",
+          "Hallway": "🚪",
+          "Office": "💼",
+          "Garage": "🚗",
+          "Loft": "📦",
+          "Garden": "🌳",
+          "Other": "➕"
+        } %}
+        {% for r in rooms %}
+          <a class="invlink" href="/s/{{ token }}/room/{{ r.id }}">
+            <div class="invtop">
+              <div class="invroom">{{ room_icons.get(r.name, "📦") }} {{ r.name }}</div>
+              <div class="invmeta">{{ (r.photos|length) if r.photos else 0 }} photos</div>
+            </div>
+            <div class="invitems">
+              {% if r.get('items') and r.get('items')|length > 0 %}
+                ✅ <strong>{{ r.get('items')|length }} items detected</strong> • Tap to view
+              {% else %}
+                <span class="muted">📸 Tap to scan items</span>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      {% if rooms and rooms|length > 0 %}
+        <a class="btn" href="/s/{{ token }}/quote-preview">💰 See My Quote</a>
+        <div class="microhint" style="text-align:center; margin-top:8px;">
+          Based on {% set total = namespace(items=0) %}{% for r in rooms %}{% set total.items = total.items + (r.get('items')|length if r.get('items') else 0) %}{% endfor %}{{ total.items }} items detected in {{ rooms|length }} room{{ 's' if rooms|length > 1 else '' }}
+        </div>
+      {% else %}
+        <button class="btn" style="opacity:.55; pointer-events:none;">Select rooms to continue</button>
+        <div class="microhint" style="text-align:center; margin-top:8px;">Tap the rooms above to get started</div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

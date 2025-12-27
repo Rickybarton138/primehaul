@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <title>{{ title or "PrimeHaul OS" }}</title>
+    <link rel="stylesheet" href="/static/app.css?v=3" />
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="nav">
+        <div class="nav-inner">
+          {% if back_url %}
+            <a class="nav-back" href="{{ back_url }}" aria-label="Back">‹ Back</a>
+          {% else %}
+            <span class="nav-back ghost" aria-hidden="true">‹ Back</span>
+          {% endif %}
+
+          <div class="nav-center">
+            {{ nav_title if nav_title else "PrimeHaul OS" }}
+          </div>
+
+          <span class="nav-back ghost" aria-hidden="true">‹ Back</span>
+        </div>
+
+        {% if progress is not none %}
+          <div class="nav-progress" aria-label="Progress">
+            <div class="nav-progress-inner">
+              <div class="nav-progress-bar" data-progress="{{ progress|default(0) }}"></div>
+            </div>
+          </div>
+        {% endif %}
+      </header>
+
+      <main class="screen" role="main">
+        {% block content %}{% endblock %}
+      </main>
+
+      {% block footer %}{% endblock %}
+    </div>
+
+    <script>
+      (function () {
+        // Prevent accidental double submits on mobile
+        document.addEventListener(
+          "submit",
+          function (e) {
+            const btn = e.target.querySelector('button[type="submit"]');
+            if (btn) {
+              btn.disabled = true;
+              btn.classList.add("is-busy");
+            }
+          },
+          true
+        );
+
+        // Progress bar width (avoid inline style with Jinja)
+        const bar = document.querySelector(".nav-progress-bar[data-progress]");
+        if (bar) {
+          const p = Number(bar.getAttribute("data-progress") || "0");
+          const clamped = Math.max(0, Math.min(100, p));
+          bar.style.width = clamped + "%";
+        }
+      })();
+    </script>
+  </body>
+</html>

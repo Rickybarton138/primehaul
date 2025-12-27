@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">📍 Where are you moving?</div>
+  <p class="subtitle">Tap to search and select your pickup and delivery locations.</p>
+
+  {% if request.query_params.get('err') == 'missing' %}
+    <div class="group">
+      <div class="hint">Please set both pickup and delivery locations.</div>
+    </div>
+  {% elif request.query_params.get('err') == 'coords' %}
+    <div class="group">
+      <div class="hint">We couldn’t read those locations — please select again.</div>
+    </div>
+  {% endif %}
+
+  <!-- MAP ONLY (no buttons inside the map) -->
+  <div
+    class="mapwrap"
+    data-mapbox-token="{{ mapbox_token|default('') }}"
+    data-pickup='{{ pickup|default(None)|tojson }}'
+    data-dropoff='{{ dropoff|default(None)|tojson }}'
+  >
+    <div id="map" class="map"></div>
+  </div>
+
+  <!-- ADDRESS CARD BELOW MAP -->
+  <div class="group">
+    <button class="locrow" type="button" id="pickupBtn">
+      <span class="dot dot-pickup"></span>
+      <div class="loctext">
+        <div class="loctitle">Pickup Location</div>
+        <div class="locsub" id="pickupLabel">
+          {% if pickup and pickup.label %}{{ pickup.label }}{% else %}Tap to set pickup address{% endif %}
+        </div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="opacity:0.5; flex-shrink:0;">
+        <path d="M7 5L12 10L7 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <button class="locrow" type="button" id="dropoffBtn" style="margin-top:12px;">
+      <span class="dot dot-dropoff"></span>
+      <div class="loctext">
+        <div class="loctitle">Delivery Location</div>
+        <div class="locsub" id="dropoffLabel">
+          {% if dropoff and dropoff.label %}{{ dropoff.label }}{% else %}Tap to set delivery address{% endif %}
+        </div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="opacity:0.5; flex-shrink:0;">
+        <path d="M7 5L12 10L7 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <div class="hint" style="margin-top:14px;">
+      💡 Choose the exact building entrance for the most accurate quote
+    </div>
+  </div>
+
+  <form id="moveForm" method="post" action="/s/{{ token }}/move">
+    <input type="hidden" name="pickup_label" id="pickup_label" />
+    <input type="hidden" name="pickup_lat" id="pickup_lat" />
+    <input type="hidden" name="pickup_lng" id="pickup_lng" />
+
+    <input type="hidden" name="dropoff_label" id="dropoff_label" />
+    <input type="hidden" name="dropoff_lat" id="dropoff_lat" />
+    <input type="hidden" name="dropoff_lng" id="dropoff_lng" />
+  </form>
+
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.17.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.17.0/mapbox-gl.js"></script>
+  <script defer src="https://api.mapbox.com/search-js/v1.5.0/web.js"></script>
+
+  <script>
+    (function () {
+      const wrap = document.querySelector(".mapwrap");
+      if (!wrap) return;
+
+      const token = wrap.getAttribute("data-mapbox-token") || "";
+      if (!token) {
+        console.warn("Missing MAPBOX_ACCESS_TOKEN");
+        return;
+      }
+
+      let pickupPrefill = null;
+      let dropoffPrefill = null;
+      try { pickupPrefill = JSON.parse(wrap.getAttribute("data-pickup") || "null"); } catch (e) {}
+      try { dropoffPrefill = JSON.parse(wrap.getAttribute("data-dropoff") || "null"); } catch (e) {}
+
+      mapboxgl.accessToken = token;
+
+      const map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [-0.1276, 51.5072],
+        zoom: 11
+      });
+
+      setTimeout(function(){ map.resize(); }, 300);
+
+      const pickupLabelEl = document.getElementById("pickupLabel");
+      const dropoffLabelEl = document.getElementById("dropoffLabel");
+
+      const pickup = {
+        labelInput: document.getElementById("pickup_label"),
+        latInput: document.getElementById("pickup_lat"),
+        lngInput: document.getElementById("pickup_lng")
+      };
+
+      const dropoff = {
+        labelInput: document.getElementById("dropoff_label"),
+        latInput: document.getElementById("dropoff_lat"),
+        lngInput: document.getElementById("dropoff_lng")
+      };
+
+      let pickupMarker = null;
+      let dropoffMarker = null;
+
+      function tickContinue() {
+        const btn = document.getElementById("continueBtn");
+        const hint = document.getElementById("continueHint");
+        if (!btn) return;
+        const ok = pickup.latInput.value && pickup.lngInput.value && dropoff.latInput.value && dropoff.lngInput.value;
+        btn.disabled = !ok;
+        if (ok) {
+          btn.classList.add("ready");
+          if (hint) hint.textContent = "Ready to go!";
+        } else {
+          btn.classList.remove("ready");
+          if (hint) hint.textContent = "Set both locations to continue";
+        }
+      }
+
+      function setMarker(lng, lat) {
+        return new mapboxgl.Marker().setLngLat([lng, lat]).addTo(map);
+      }
+
+      function setPoint(which, labelEl, feature, isPickup) {
+        if (!feature || !feature.geometry || !feature.geometry.coordinates) return;
+
+        const coords = feature.geometry.coordinates;
+        const lng = coords[0];
+        const lat = coords[1];
+
+        const props = feature.properties || {};
+        const label =
+          props.full_address ||
+          props.name ||
+          props.place_formatted ||
+          props.description ||
+          "Selected location";
+
+        labelEl.textContent = label;
+        which.labelInput.value = label;
+        which.latInput.value = String(lat);
+        which.lngInput.value = String(lng);
+
+        if (isPickup) {
+          if (pickupMarker) pickupMarker.remove();
+          pickupMarker = setMarker(lng, lat);
+        } else {
+          if (dropoffMarker) dropoffMarker.remove();
+          dropoffMarker = setMarker(lng, lat);
+        }
+
+        map.flyTo({ center: [lng, lat], zoom: 14 });
+        tickContinue();
+      }
+
+      function openSearch(isPickup) {
+        const overlay = document.createElement("div");
+        overlay.className = "overlay";
+        overlay.innerHTML =
+          '<div class="modal">' +
+          '  <div class="modal-title">Search address</div>' +
+          '  <mapbox-search-box id="sb"></mapbox-search-box>' +
+          '  <button class="btn secondary" type="button" id="closeBtn">Cancel</button>' +
+          '</div>';
+
+        document.body.appendChild(overlay);
+
+        const sb = overlay.querySelector("#sb");
+        sb.accessToken = token;
+
+        overlay.querySelector("#closeBtn").onclick = function () { overlay.remove(); };
+
+        sb.addEventListener("retrieve", function (ev) {
+          const detail = ev && ev.detail;
+          const features = detail && detail.features;
+          const feature = features && features[0];
+
+          if (feature) {
+            if (isPickup) setPoint(pickup, pickupLabelEl, feature, true);
+            else setPoint(dropoff, dropoffLabelEl, feature, false);
+          }
+          overlay.remove();
+        });
+      }
+
+      document.getElementById("pickupBtn").addEventListener("click", function () { openSearch(true); });
+      document.getElementById("dropoffBtn").addEventListener("click", function () { openSearch(false); });
+
+      map.on("load", function () {
+        if (pickupPrefill && pickupPrefill.lng != null && pickupPrefill.lat != null) {
+          pickupLabelEl.textContent = pickupPrefill.label || "Pickup";
+          pickup.labelInput.value = pickupPrefill.label || "";
+          pickup.latInput.value = String(pickupPrefill.lat);
+          pickup.lngInput.value = String(pickupPrefill.lng);
+          pickupMarker = setMarker(pickupPrefill.lng, pickupPrefill.lat);
+          map.flyTo({ center: [pickupPrefill.lng, pickupPrefill.lat], zoom: 12 });
+        }
+
+        if (dropoffPrefill && dropoffPrefill.lng != null && dropoffPrefill.lat != null) {
+          dropoffLabelEl.textContent = dropoffPrefill.label || "Delivery";
+          dropoff.labelInput.value = dropoffPrefill.label || "";
+          dropoff.latInput.value = String(dropoffPrefill.lat);
+          dropoff.lngInput.value = String(dropoffPrefill.lng);
+          dropoffMarker = setMarker(dropoffPrefill.lng, dropoffPrefill.lat);
+        }
+
+        tickContinue();
+      });
+
+      tickContinue();
+    })();
+  </script>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <button id="continueBtn" class="btn" type="submit" form="moveForm" disabled>
+        ✓ Continue to Property Type
+      </button>
+      <div class="microhint" style="text-align:center; margin-top:8px;" id="continueHint">
+        Set both locations to continue
+      </div>
+    </div>
+  </div>
+{% endblock %}

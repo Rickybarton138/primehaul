@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">Inventory</div>
+  <p class="subtitle">Add every item for removal. Keep it simple — rough counts are fine.</p>
+
+  {% set inv_count = (inventory|length) if inventory else 0 %}
+
+  {% if request.query_params.get('err') == 'room' %}
+    <div class="group">
+      <div class="hint">Please tap a room first.</div>
+    </div>
+  {% endif %}
+
+  <!-- STEP 1 -->
+  <div class="group">
+    <div class="stephead">
+      <div class="stepbadge">1</div>
+      <div class="steptext">
+        <div class="steptitle">Choose a room</div>
+        <div class="stepsub">Tap one to start</div>
+      </div>
+    </div>
+
+    <div class="chipgrid" id="roomGrid">
+      {% for opt in ["Living room","Bedroom","Kitchen","Bathroom","Dining room","Hallway","Office","Garage","Loft","Garden","Other"] %}
+        <button class="chip" type="button" data-room="{{ opt }}">+ {{ opt }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="pillrow">
+      <span class="pill" id="roomPill">No room selected</span>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="group" id="step2" aria-live="polite">
+    <div class="stephead">
+      <div class="stepbadge">2</div>
+      <div class="steptext">
+        <div class="steptitle">Add items</div>
+        <div class="stepsub">Tap common items, then add any extra</div>
+      </div>
+    </div>
+
+    <div class="suggestwrap">
+      <div class="suggesttitle">Common items (tap to add)</div>
+      <div class="suggestgrid" id="suggestGrid">
+        <!-- Filled by JS based on room -->
+      </div>
+    </div>
+
+    <form id="addInvForm" method="post" action="/s/{{ token }}/inventory/add">
+      <input type="hidden" name="room" id="roomField" value="" />
+
+      <label class="label" for="itemsField" style="margin-top:12px;">Item notes</label>
+      <textarea
+        class="textarea"
+        id="itemsField"
+        name="items"
+        rows="4"
+        placeholder="Example: 3-seater sofa, 12 boxes, TV"
+      ></textarea>
+
+      <div class="microhint">
+        Tip: If unsure, write “mixed boxes” or “misc items” — photos come next.
+      </div>
+
+      <button id="addBtn" class="btn" type="submit" style="margin-top:12px;" disabled>
+        Add this room
+      </button>
+    </form>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="group">
+    <div class="stephead">
+      <div class="stepbadge">3</div>
+      <div class="steptext">
+        <div class="steptitle">Review</div>
+        <div class="stepsub">You can add more rooms anytime</div>
+      </div>
+    </div>
+
+    {% if inventory and inventory|length > 0 %}
+      <div class="invlist">
+        {% for r in inventory %}
+          <div class="invcard">
+            <div class="invtop">
+              <div class="invroom">{{ r.room }}</div>
+              <div class="invmeta">{{ r.photo_count }} photos</div>
+            </div>
+
+            {% if r.items %}
+              <div class="invitems">{{ r.items }}</div>
+            {% else %}
+              <div class="invitems muted">No items listed.</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="hint" style="margin-top:10px;">
+        Next: we’ll add “Add photos” per room to auto-detect items and volume.
+      </div>
+    {% else %}
+      <div class="empty">
+        <div class="empty-title">No rooms added yet</div>
+        <div class="empty-sub">Start by tapping a room above.</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <script>
+    (function () {
+      const roomGrid = document.getElementById("roomGrid");
+      const suggestGrid = document.getElementById("suggestGrid");
+      const roomField = document.getElementById("roomField");
+      const roomPill = document.getElementById("roomPill");
+      const itemsField = document.getElementById("itemsField");
+      const addBtn = document.getElementById("addBtn");
+
+      // Room -> suggestions (granny-proof, common sense)
+      const SUGGEST = {
+        "Living room": ["Sofa", "Armchair", "TV", "TV stand", "Coffee table", "Boxes", "Rug", "Lamp"],
+        "Bedroom": ["Bed frame", "Mattress", "Wardrobe", "Chest of drawers", "Bedside table", "Boxes", "Mirror"],
+        "Kitchen": ["Fridge", "Freezer", "Washing machine", "Dishwasher", "Microwave", "Table", "Chairs", "Boxes"],
+        "Bathroom": ["Cabinet", "Mirror", "Boxes", "Small items"],
+        "Dining room": ["Dining table", "Chairs", "Sideboard", "Boxes", "Mirror"],
+        "Hallway": ["Shoe rack", "Coat stand", "Boxes", "Mirror"],
+        "Office": ["Desk", "Office chair", "Filing cabinet", "Monitor", "Printer", "Boxes"],
+        "Garage": ["Tool chest", "Shelving", "Bikes", "Boxes", "Misc items"],
+        "Loft": ["Boxes", "Suitcases", "Misc items"],
+        "Garden": ["Outdoor table", "Outdoor chairs", "BBQ", "Planters", "Shed items"],
+        "Other": ["Boxes", "Misc items"]
+      };
+
+      let selectedRoom = "";
+
+      function setRoom(roomName){
+        selectedRoom = roomName;
+        roomField.value = roomName;
+        roomPill.textContent = "Room: " + roomName;
+        roomPill.classList.add("pill-live");
+
+        // enable add button once a room is selected
+        addBtn.disabled = false;
+
+        // rebuild suggestion chips
+        suggestGrid.innerHTML = "";
+        const items = SUGGEST[roomName] || SUGGEST["Other"];
+        items.forEach((label) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "suggest";
+          b.textContent = "+ " + label;
+          b.addEventListener("click", () => addItem(label));
+          suggestGrid.appendChild(b);
+        });
+
+        // small friendly nudge
+        if (!itemsField.value.trim()) {
+          itemsField.placeholder = "Example: " + (items.slice(0,3).join(", ")) + ", Boxes";
+        }
+      }
+
+      function addItem(label){
+        const cur = (itemsField.value || "").trim();
+        if (!cur) {
+          itemsField.value = label;
+          return;
+        }
+        // avoid duplicates (lightweight)
+        const lower = cur.toLowerCase();
+        if (lower.includes(label.toLowerCase())) return;
+        itemsField.value = cur + ", " + label;
+      }
+
+      // Room chip click
+      if (roomGrid) {
+        roomGrid.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-room]");
+          if (!btn) return;
+          // visual selected state
+          roomGrid.querySelectorAll(".chip").forEach(x => x.classList.remove("selected"));
+          btn.classList.add("selected");
+
+          setRoom(btn.getAttribute("data-room") || "");
+          // scroll the user gently to Step 2 on small screens
+          const step2 = document.getElementById("step2");
+          if (step2) step2.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+
+      // Safety: prevent submit with no room
+      document.getElementById("addInvForm")?.addEventListener("submit", (e) => {
+        if (!roomField.value) {
+          e.preventDefault();
+          alert("Please tap a room first.");
+        }
+      });
+
+      // If user already has rooms, keep CTA usable without forcing step 2
+      // (Nothing else needed.)
+    })();
+  </script>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <form id="finishInvForm" method="post" action="/s/{{ token }}/inventory/finish"></form>
+      <button class="btn" type="submit" form="finishInvForm" {% if not inventory or inventory|length == 0 %}disabled{% endif %}>
+        Get quote
+      </button>
+      {% if not inventory or inventory|length == 0 %}
+        <div class="microhint" style="text-align:center; margin-top:8px;">
+          Add at least one room to continue.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

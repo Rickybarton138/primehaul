@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+</head>
+<body>
+  <div class="app">
+    <div class="screen" style="max-width:420px;">
+      <div class="largetitle" style="text-align:center;">🔐 Admin Login</div>
+      <p class="subtitle" style="text-align:center;">PrimeHaul OS Boss Dashboard</p>
+
+      {% if error == 'invalid' %}
+        <div class="group" style="background:rgba(255,77,79,.15); border-color:rgba(255,77,79,.3);">
+          <div style="color:#ff4d4f; font-weight:600; text-align:center;">❌ Invalid password</div>
+        </div>
+      {% endif %}
+
+      <form method="post" action="/admin/login" class="group">
+        <div style="margin-bottom:12px;">
+          <label for="password" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px;">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            autofocus
+            placeholder="Enter admin password"
+            style="
+              width:100%;
+              padding:14px;
+              border-radius:12px;
+              border:1px solid var(--hair);
+              background:rgba(255,255,255,.04);
+              color:var(--text);
+              font-size:15px;
+              font-family:inherit;
+            "
+          />
+        </div>
+
+        <button class="btn ready" type="submit" style="margin-top:16px;">
+          🔓 Login to Dashboard
+        </button>
+
+        <div class="microhint" style="text-align:center; margin-top:12px;">
+          Contact your admin if you don't have access
+        </div>
+      </form>
+
+      <div class="group">
+        <div style="text-align:center; padding:8px 0;">
+          <a href="/" style="color:var(--muted); text-decoration:none; font-size:14px;">
+            ← Back to Customer Portal
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="largetitle">Map test</div>
+  <p class="subtitle">If this works, Mapbox GL is fine.</p>
+
+  <div class="mapwrap" data-mapbox-token="{{ mapbox_token|default('') }}">
+    <div id="map" class="map"></div>
+  </div>
+
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.17.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.17.0/mapbox-gl.js"></script>
+
+  <script>
+    (function(){
+      const wrap = document.querySelector(".mapwrap");
+      const token = wrap.getAttribute("data-mapbox-token") || "";
+      console.log("TOKEN prefix:", token.slice(0,3), "len:", token.length);
+      if (!token) { alert("No MAPBOX token reaching template"); return; }
+
+      mapboxgl.accessToken = token;
+      new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [-0.1276, 51.5072],
+        zoom: 11
+      });
+    })();
+  </script>
+{% endblock %}

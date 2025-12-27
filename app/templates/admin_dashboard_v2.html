@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <style>
+    .quick-approve-btn{
+      padding:8px 16px;
+      border-radius:8px;
+      border:none;
+      background:#2ee59d;
+      color:#000;
+      font-weight:700;
+      font-size:13px;
+      cursor:pointer;
+      transition:all 150ms;
+    }
+    .quick-approve-btn:hover{
+      background:#25d58d;
+      transform:scale(1.05);
+    }
+    .quick-approve-btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+    .urgency-badge{
+      display:inline-flex;
+      align-items:center;
+      padding:4px 8px;
+      border-radius:6px;
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.3px;
+    }
+    .urgency-high{
+      background:rgba(255,77,79,.2);
+      color:#ff4d4f;
+      animation:pulseUrgent 2s ease-in-out infinite;
+    }
+    .urgency-medium{
+      background:rgba(255,165,0,.2);
+      color:#ffa500;
+    }
+    .urgency-low{
+      background:rgba(46,229,157,.2);
+      color:#2ee59d;
+    }
+    @keyframes pulseUrgent{
+      0%, 100%{ opacity:1; }
+      50%{ opacity:.6; }
+    }
+    .revenue-card{
+      background:linear-gradient(135deg, rgba(46,229,157,.15), rgba(46,229,157,.05));
+      border:2px solid rgba(46,229,157,.3);
+    }
+    .customer-info{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+    .photo-count{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:6px;
+      background:rgba(255,255,255,.05);
+    }
+    .keyboard-hint{
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      padding:10px 16px;
+      background:rgba(0,0,0,.9);
+      border-radius:10px;
+      font-size:12px;
+      color:var(--text);
+      z-index:100;
+      opacity:0;
+      transition:opacity 300ms;
+    }
+    .keyboard-hint.show{
+      opacity:1;
+    }
+    .kbd{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:4px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.2);
+      font-family:monospace;
+      font-size:11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Navigation -->
+    <div class="nav">
+      <div class="nav-inner">
+        <div style="font-size:20px;">👔</div>
+        <div class="nav-center">Boss Dashboard</div>
+        <a href="/admin/logout" style="color:var(--text); text-decoration:none; font-size:14px; opacity:.8;">Logout</a>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="largetitle">📊 Quote Approvals</div>
+      <p class="subtitle">Real-time quote management • <span id="lastUpdate">Just now</span></p>
+
+      <!-- Revenue Analytics -->
+      <div class="group revenue-card">
+        <div style="font-weight:700; margin-bottom:12px;">💰 Revenue Analytics</div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+          <div style="text-align:center;">
+            <div style="font-size:11px; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.5px;">Pending</div>
+            <div style="font-size:24px; font-weight:800; color:#ffa500;">£<span id="pendingRevenue">0</span></div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.5px;">Approved Today</div>
+            <div style="font-size:24px; font-weight:800; color:#2ee59d;">£<span id="approvedRevenue">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Awaiting Approval -->
+      <div class="group">
+        <div class="rowhead">
+          <div class="rowtitle">⏳ Awaiting Approval</div>
+          <div class="rowsub" id="awaitingCount">{{ awaiting_jobs|length }}</div>
+        </div>
+
+        {% if awaiting_jobs|length > 0 %}
+          <div class="invlist" id="awaitingList">
+            {% for job in awaiting_jobs %}
+              <div class="invlink" data-job-id="{{ job.token }}" style="border-color:rgba(255,165,0,.3); background:rgba(255,165,0,.05);">
+                <div class="invtop">
+                  <div style="flex:1;">
+                    <div class="invroom">
+                      🆕 <strong>{{ job.customer_name or ('Job #' + job.token[:8]) }}</strong>
+                    </div>
+                    <div class="customer-info">
+                      {% if job.customer_email %}
+                        ✉️ {{ job.customer_email }}
+                      {% endif %}
+                      {% if job.customer_phone %}
+                        • 📱 {{ job.customer_phone }}
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="invmeta" style="color:#ffa500; font-weight:700; margin-bottom:4px;">Pending</div>
+                    <span class="urgency-badge urgency-high" id="urgency-{{ job.token }}">⚡ URGENT</span>
+                  </div>
+                </div>
+                <div class="invitems" style="margin-top:10px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                      <strong style="font-size:18px; color:#ffa500;">£{{ "%.0f"|format((job.custom_price_low or (job.get('total_cbm', 0) * 35 + 250))) }}</strong>
+                      <span style="color:var(--muted);">
+                        • {{ job.get('total_cbm', 0) }} m³
+                        • {{ job.get('total_weight_kg', 0) }} kg
+                      </span>
+                      <span class="photo-count">
+                        📸 {{ job.rooms|sum(attribute='photos')|length if job.rooms else 0 }}
+                      </span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                      <button class="quick-approve-btn" onclick="quickApprove('{{ job.token }}', event)">
+                        ⚡ Quick Approve
+                      </button>
+                      <a href="/admin/job/{{ job.token }}" class="btn secondary" style="padding:8px 16px; margin:0; font-size:13px;">
+                        View Details
+                      </a>
+                    </div>
+                  </div>
+                  {% if job.pickup and job.dropoff %}
+                    <div style="font-size:11px; color:var(--muted); margin-top:8px;">
+                      📍 {{ job.pickup.label[:40] }}... → {{ job.dropoff.label[:40] }}...
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty" style="margin-top:12px;">
+            <div class="empty-title">All caught up! ✅</div>
+            <div class="empty-sub">No quotes waiting for approval</div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Recently Approved -->
+      {% if approved_jobs|length > 0 %}
+        <div class="group">
+          <div class="rowhead">
+            <div class="rowtitle">✅ Recently Approved</div>
+            <div class="rowsub">{{ approved_jobs|length }}</div>
+          </div>
+
+          <div class="invlist">
+            {% for job in approved_jobs %}
+              <a class="invlink" href="/admin/job/{{ job.token }}" style="border-color:rgba(46,229,157,.3); background:rgba(46,229,157,.05);">
+                <div class="invtop">
+                  <div style="flex:1;">
+                    <div class="invroom">
+                      ✓ <strong>{{ job.customer_name or ('Job #' + job.token[:8]) }}</strong>
+                    </div>
+                    <div class="customer-info">
+                      {% if job.customer_email %}✉️ {{ job.customer_email }}{% endif %}
+                    </div>
+                  </div>
+                  <div class="invmeta" style="color:#2ee59d; font-weight:700;">Approved</div>
+                </div>
+                <div class="invitems">
+                  <strong>£{{ "%.0f"|format((job.custom_price_low or (job.get('total_cbm', 0) * 35 + 250))) }}</strong>
+                  • {{ job.get('total_cbm', 0) }} m³
+                  • {{ job.get('total_weight_kg', 0) }} kg
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Stats Summary -->
+      <div class="group">
+        <div style="font-weight:700; margin-bottom:12px;">📈 Today's Summary</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="statrow">
+            <div class="staticon" style="background:rgba(255,165,0,.15);">⏳</div>
+            <div class="statrow-text">
+              <span class="statrow-label">Awaiting approval</span>
+              <span class="statrow-value">{{ awaiting_jobs|length }}</span>
+            </div>
+          </div>
+          <div class="statrow">
+            <div class="staticon" style="background:rgba(46,229,157,.15);">✅</div>
+            <div class="statrow-text">
+              <span class="statrow-label">Approved today</span>
+              <span class="statrow-value">{{ approved_jobs|length }}</span>
+            </div>
+          </div>
+          <div class="statrow">
+            <div class="staticon" style="background:rgba(255,77,79,.15);">❌</div>
+            <div class="statrow-text">
+              <span class="statrow-label">Rejected today</span>
+              <span class="statrow-value">{{ rejected_jobs|length }}</span>
+            </div>
+          </div>
+          <div class="statrow">
+            <div class="staticon" style="background:rgba(255,255,255,.12);">⚡</div>
+            <div class="statrow-text">
+              <span class="statrow-label">Avg. response time</span>
+              <span class="statrow-value">< 30 min</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Hints -->
+    <div class="keyboard-hint" id="keyboardHint">
+      <kbd>?</kbd> Show shortcuts
+    </div>
+  </div>
+
+  <!-- Sound effect for new quotes -->
+  <audio id="notificationSound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwPUKXh8LljHAU2kdXyz3orBSJ2xu/gkUELElyx6OyrWBULRp/g8r1qIAUsgs/y2ooiCQ==" type="audio/wav"/>
+  </audio>
+
+  <script>
+    let lastQuoteCount = {{ awaiting_jobs|length }};
+    const notificationSound = document.getElementById('notificationSound');
+
+    // Quick approve function
+    async function quickApprove(token, event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = '⏳ Approving...';
+
+      try {
+        const response = await fetch(`/admin/job/${token}/quick-approve`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          btn.textContent = '✅ Approved!';
+          btn.style.background = '#2ee59d';
+
+          // Remove from list after animation
+          setTimeout(() => {
+            const card = document.querySelector(`[data-job-id="${token}"]`);
+            if (card) {
+              card.style.transition = 'all 300ms ease';
+              card.style.opacity = '0';
+              card.style.transform = 'translateX(100px)';
+              setTimeout(() => card.remove(), 300);
+            }
+
+            // Update counts
+            const count = parseInt(document.getElementById('awaitingCount').textContent) - 1;
+            document.getElementById('awaitingCount').textContent = count;
+
+            // Reload page after 1 second to refresh all stats
+            setTimeout(() => location.reload(), 1000);
+          }, 800);
+        } else {
+          btn.textContent = '❌ Failed';
+          btn.disabled = false;
+          setTimeout(() => {
+            btn.textContent = '⚡ Quick Approve';
+          }, 2000);
+        }
+      } catch (err) {
+        btn.textContent = '❌ Error';
+        btn.disabled = false;
+        setTimeout(() => {
+          btn.textContent = '⚡ Quick Approve';
+        }, 2000);
+      }
+    }
+
+    // Calculate urgency and revenue
+    function updateStats() {
+      // Calculate pending revenue
+      let pendingTotal = 0;
+      document.querySelectorAll('[data-job-id]').forEach(card => {
+        const priceText = card.querySelector('.invitems strong').textContent;
+        const price = parseInt(priceText.replace(/[^0-9]/g, ''));
+        pendingTotal += price;
+      });
+      document.getElementById('pendingRevenue').textContent = pendingTotal.toLocaleString();
+
+      // Calculate approved revenue
+      let approvedTotal = {{ approved_jobs|sum(attribute='custom_price_low') or (approved_jobs|map(attribute='total_cbm')|sum * 35 + approved_jobs|length * 250) }};
+      document.getElementById('approvedRevenue').textContent = Math.round(approvedTotal).toLocaleString();
+    }
+
+    // Auto-refresh with notification
+    let refreshInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/admin/dashboard');
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newCount = parseInt(doc.querySelector('#awaitingCount')?.textContent || 0);
+
+        // Play sound if new quote arrived
+        if (newCount > lastQuoteCount) {
+          notificationSound.play().catch(() => {});
+
+          // Show notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('New Quote Submitted! 💰', {
+              body: `${newCount - lastQuoteCount} new quote(s) awaiting approval`,
+              icon: '/static/icon.png',
+              tag: 'new-quote'
+            });
+          }
+        }
+
+        lastQuoteCount = newCount;
+
+        // Update timestamp
+        document.getElementById('lastUpdate').textContent = 'Just now';
+      } catch (err) {
+        console.log('Auto-refresh error:', err);
+      }
+    }, 15000); // Every 15 seconds
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Press 'r' to reload
+      if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
+        location.reload();
+        e.preventDefault();
+      }
+
+      // Press '1' to approve first quote
+      if (e.key === '1' && !e.metaKey && !e.ctrlKey) {
+        const firstBtn = document.querySelector('.quick-approve-btn');
+        if (firstBtn) firstBtn.click();
+        e.preventDefault();
+      }
+
+      // Press '?' to show shortcuts
+      if (e.key === '?') {
+        alert('Keyboard Shortcuts:\\n\\nR - Reload dashboard\\n1 - Quick approve first quote\\nESC - Close modals');
+        e.preventDefault();
+      }
+    });
+
+    // Update stats on load
+    updateStats();
+
+    // Show keyboard hint briefly
+    setTimeout(() => {
+      const hint = document.getElementById('keyboardHint');
+      hint.classList.add('show');
+      setTimeout(() => hint.classList.remove('show'), 3000);
+    }, 2000);
+  </script>
+</body>
+</html>

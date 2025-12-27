@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="largetitle">✨ Instant Moving Quote</div>
+  <p class="subtitle">Get a professional removal quote in minutes — powered by AI, no human survey needed.</p>
+
+  <div class="group">
+    <div style="font-weight:700; margin-bottom:12px;">How it works</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; gap:12px; align-items:start;">
+        <div class="staticon" style="background:rgba(255,255,255,.12);">1️⃣</div>
+        <div style="flex:1;">
+          <div style="font-weight:600; margin-bottom:2px;">Set your locations</div>
+          <div class="hint" style="margin:0;">Tap to select pickup and delivery addresses on the map</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:start;">
+        <div class="staticon" style="background:rgba(255,255,255,.12);">2️⃣</div>
+        <div style="flex:1;">
+          <div style="font-weight:600; margin-bottom:2px;">Scan your rooms</div>
+          <div class="hint" style="margin:0;">Take a few photos — AI detects items, dimensions & weight</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:start;">
+        <div class="staticon" style="background:rgba(255,255,255,.12);">3️⃣</div>
+        <div style="flex:1;">
+          <div style="font-weight:600; margin-bottom:2px;">Get instant quote</div>
+          <div class="hint" style="margin:0;">Professional CBM-based pricing in real-time</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <div style="text-align:center; padding:8px 0;">
+      <div style="font-size:13px; color:var(--muted); margin-bottom:6px;">⚡ Typical completion time</div>
+      <div style="font-size:24px; font-weight:800; letter-spacing:-.3px;">2-3 minutes</div>
+    </div>
+  </div>
+
+  <form id="startForm" method="post" action="/s/{{ token }}/start"></form>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <button class="btn ready" type="submit" form="startForm">🚀 Get My Free Quote</button>
+      <div class="microhint" style="text-align:center; margin-top:8px;">No signup • No payment • No obligation</div>
+    </div>
+  </div>
+{% endblock %}
