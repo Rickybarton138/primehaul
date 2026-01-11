@@ -685,6 +685,7 @@ async def signup_page(request: Request):
 @app.post("/auth/signup")
 async def signup(
     request: Request,
+    _auth: bool = Depends(staging_auth_required),
     company_name: str = Form(...),
     slug: str = Form(...),
     email: str = Form(...),
