@@ -28,7 +28,6 @@
         class="form-input"
         required
         min="{{ min_date }}"
-        max="{{ max_date }}"
         value="{{ job.move_date.strftime('%Y-%m-%d') if job and job.move_date else '' }}"
       />
       <div class="microhint" style="margin-top:8px;">
