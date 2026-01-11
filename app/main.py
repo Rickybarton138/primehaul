@@ -899,9 +899,17 @@ def start_v2_post(
     company = request.state.company
     job = get_or_create_job(company.id, token, db)
 
-    # Save addresses
-    job.pickup = {"label": pickup_label, "lat": float(pickup_lat), "lng": float(pickup_lng)}
-    job.dropoff = {"label": dropoff_label, "lat": float(dropoff_lat), "lng": float(dropoff_lng)}
+    # Save addresses (with fallback for empty coordinates)
+    try:
+        pickup_lat_val = float(pickup_lat) if pickup_lat else 0.0
+        pickup_lng_val = float(pickup_lng) if pickup_lng else 0.0
+        dropoff_lat_val = float(dropoff_lat) if dropoff_lat else 0.0
+        dropoff_lng_val = float(dropoff_lng) if dropoff_lng else 0.0
+    except (ValueError, TypeError):
+        pickup_lat_val = pickup_lng_val = dropoff_lat_val = dropoff_lng_val = 0.0
+
+    job.pickup = {"label": pickup_label, "lat": pickup_lat_val, "lng": pickup_lng_val}
+    job.dropoff = {"label": dropoff_label, "lat": dropoff_lat_val, "lng": dropoff_lng_val}
 
     # Save property type
     job.property_type = property_type
