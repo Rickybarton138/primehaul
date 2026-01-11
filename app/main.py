@@ -96,7 +96,8 @@ async def resolve_and_check_company(request: Request, call_next):
                 )
 
             # Check subscription status
-            now = datetime.utcnow()
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
 
             # Trial expired?
             if company.subscription_status == 'trial' and company.trial_ends_at:
