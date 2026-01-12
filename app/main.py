@@ -923,12 +923,7 @@ def start_v2_post(
 
     db.commit()
 
-    # Smart skip: If studio/1bed, skip access questions and go straight to photos
-    # Most studios/1beds are simpler moves that don't need detailed access info
-    if property_type in ["studio_flat", "1_bed_flat"]:
-        return RedirectResponse(url=f"/s/{company_slug}/{token}/rooms", status_code=303)
-
-    # Otherwise go to access questions
+    # Always go to access questions - even studios/1-beds can have difficult access
     return RedirectResponse(url=f"/s/{company_slug}/{token}/access", status_code=303)
 
 
