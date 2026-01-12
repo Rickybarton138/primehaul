@@ -8,15 +8,15 @@
   --muted:rgba(255,255,255,.72);
   --hair:rgba(255,255,255,.12);
 
-  /* Professional accent (Starlink-inspired blue) */
-  --accent:#0066CC;
-  --accent-hover:#0052A3;
-  --accent-light:rgba(0,102,204,.1);
-  --accent-glow:rgba(0,102,204,.4);
+  /* Monochrome accent (clean white) */
+  --accent:#ffffff;
+  --accent-hover:#f0f0f0;
+  --accent-light:rgba(255,255,255,.08);
+  --accent-glow:rgba(255,255,255,.3);
 
-  /* Success color */
-  --success:#00A86B;
-  --success-light:rgba(0,168,107,.1);
+  /* Success color (subtle green for approved states only) */
+  --success:#2ee59d;
+  --success-light:rgba(46,229,157,.1);
 
   --radius:12px;
 
@@ -293,7 +293,7 @@ body{
   font-size:17px;
   font-weight:700;
   background:var(--accent);
-  color:#ffffff;
+  color:#000000;
   cursor:pointer;
   transition:all var(--timing-normal) var(--ease-smooth);
   position:relative;
@@ -304,7 +304,7 @@ body{
   touch-action:manipulation;
   -webkit-user-select: none;
   user-select: none;
-  box-shadow:0 2px 8px rgba(0,102,204,.25);
+  box-shadow:0 2px 12px rgba(255,255,255,.15), 0 0 0 1px rgba(255,255,255,.1);
 }
 
 .btn::before{
@@ -325,7 +325,7 @@ body{
   .btn:hover:not(:disabled){
     background:var(--accent-hover);
     transform:translateY(-2px);
-    box-shadow:0 8px 24px rgba(0,102,204,.4), 0 0 20px rgba(0,102,204,.2);
+    box-shadow:0 8px 32px rgba(255,255,255,.25), 0 0 0 1px rgba(255,255,255,.2);
   }
 }
 
@@ -333,7 +333,7 @@ body{
 .btn:active:not(:disabled){
   transform:scale(0.96);
   transition:all var(--timing-fast) var(--ease-smooth);
-  box-shadow:0 2px 6px rgba(0,102,204,.3);
+  box-shadow:0 2px 8px rgba(255,255,255,.2);
 }
 
 .btn:disabled{
@@ -343,17 +343,17 @@ body{
 }
 
 .btn.ready{
-  box-shadow:0 4px 16px rgba(0,102,204,.4), 0 0 24px rgba(0,102,204,.3);
+  box-shadow:0 4px 20px rgba(255,255,255,.3), 0 0 0 1px rgba(255,255,255,.15);
   animation:pulse 2.5s ease-in-out infinite;
 }
 
 @keyframes pulse{
   0%, 100%{
-    box-shadow:0 4px 16px rgba(0,102,204,.4), 0 0 24px rgba(0,102,204,.3);
+    box-shadow:0 4px 20px rgba(255,255,255,.3), 0 0 0 1px rgba(255,255,255,.15);
     transform:scale(1);
   }
   50%{
-    box-shadow:0 6px 20px rgba(0,102,204,.5), 0 0 32px rgba(0,102,204,.4);
+    box-shadow:0 6px 28px rgba(255,255,255,.4), 0 0 0 1px rgba(255,255,255,.2);
     transform:scale(1.005);
   }
 }

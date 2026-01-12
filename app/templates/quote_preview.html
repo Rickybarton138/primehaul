@@ -12,7 +12,7 @@
   <div class="group">
     <div class="bigprice">£{{ estimate_low }} – £{{ estimate_high }}</div>
     {% if auto_approved %}
-      <div class="pill" style="background:var(--success-light); color:var(--success); border-color:var(--success);">Approved</div>
+      <div class="pill" style="background:rgba(255,255,255,.1); color:#ffffff; border-color:rgba(255,255,255,.3);">Approved</div>
     {% else %}
       <div class="pill">{{ confidence }}</div>
     {% endif %}
@@ -44,7 +44,7 @@
           </div>
         </div>
       </div>
-      <div style="margin-top:12px; padding:12px; border-radius:8px; background:var(--accent-light); font-size:13px; color:var(--muted);">
+      <div style="margin-top:12px; padding:12px; border-radius:8px; background:rgba(255,255,255,.05); font-size:13px; color:var(--muted); border:1px solid rgba(255,255,255,.1);">
         Our team will review your inventory and confirm within 2 hours
       </div>
     </div>
@@ -53,7 +53,7 @@
       <div style="font-weight:700; margin-bottom:12px;">Route details</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <div class="statrow">
-          <div class="staticon" style="background:var(--success-light); color:var(--success);">
+          <div class="staticon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <circle cx="12" cy="12" r="3"></circle>
@@ -65,7 +65,7 @@
           </div>
         </div>
         <div class="statrow">
-          <div class="staticon" style="background:rgba(255,77,79,.15); color:#ff4d4f;">
+          <div class="staticon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
               <circle cx="12" cy="10" r="3"></circle>
@@ -78,7 +78,7 @@
         </div>
         {% if job.move_date %}
         <div class="statrow">
-          <div class="staticon" style="background:var(--accent-light); color:var(--accent);">
+          <div class="staticon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -101,7 +101,7 @@
   <div class="footer footer-clean">
     <div class="footer-inner">
       {% if auto_approved or job.status == 'approved' %}
-        <a href="/s/{{ company_slug }}/{{ token }}/contact" class="btn" style="background:var(--success); color:#fff; text-decoration:none; display:block;">
+        <a href="/s/{{ company_slug }}/{{ token }}/contact" class="btn" style="text-decoration:none; display:block;">
           Book your move
         </a>
         <div class="microhint" style="text-align:center; margin-top:8px;">
