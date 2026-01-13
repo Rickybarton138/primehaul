@@ -191,7 +191,7 @@ async def landing_page(request: Request, _auth: bool = Depends(staging_auth_requ
     Main marketing landing page for primehaul.co.uk
     Protected by password in staging mode
     """
-    return templates.TemplateResponse("landing_primehaul_uk.html", {"request": request})
+    return templates.TemplateResponse("landing_page.html", {"request": request})
 
 
 @app.get("/terms", response_class=HTMLResponse)

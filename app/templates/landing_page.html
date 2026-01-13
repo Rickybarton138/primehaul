@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrimeHaul OS - The Future of Removal Company Software</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <style>
+        body {
+            background: #0b0b0c;
+            color: #ffffff;
+        }
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 24px;
+            text-align: center;
+        }
+        .hero-title {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #ffffff 0%, #aaaaaa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-subtitle {
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 48px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .cta-primary {
+            background: #ffffff;
+            color: #000000;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+        .cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
+        }
+        .cta-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s;
+        }
+        .cta-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .features {
+            max-width: 1200px;
+            margin: 80px auto;
+            padding: 0 24px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+        }
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-4px);
+        }
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .feature-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .feature-desc {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+        .social-proof {
+            max-width: 800px;
+            margin: 80px auto;
+            padding: 48px 24px;
+            text-align: center;
+            background: rgba(46, 229, 157, 0.05);
+            border: 1px solid rgba(46, 229, 157, 0.2);
+            border-radius: 16px;
+        }
+        .pricing {
+            max-width: 1200px;
+            margin: 80px auto;
+            padding: 0 24px;
+            text-align: center;
+        }
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 48px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .price {
+            font-size: 64px;
+            font-weight: 800;
+            margin: 24px 0;
+        }
+        .price-desc {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 32px;
+        }
+        .pricing-features {
+            text-align: left;
+            margin: 32px 0;
+        }
+        .pricing-feature {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1 class="hero-title">The OS for Removal Companies</h1>
+        <p class="hero-subtitle">
+            AI-powered quoting, mobile-first customer experience, and powerful admin tools.
+            Everything you need to run a modern removal company.
+        </p>
+        <div class="cta-buttons">
+            <a href="/auth/signup" class="cta-primary">Start Free Trial</a>
+            <a href="#features" class="cta-secondary">See How It Works</a>
+        </div>
+    </div>
+
+    <div class="features" id="features">
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <div class="feature-title">Mobile-First Customer Experience</div>
+                <div class="feature-desc">
+                    Customers take photos with their phone. AI detects everything automatically.
+                    Instant quotes in under 3 minutes. No manual entry required.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-title">AI-Powered Detection</div>
+                <div class="feature-desc">
+                    Our AI recognizes furniture, boxes, and items from photos. Calculates volume,
+                    weight, and access difficulty automatically. No more manual counting.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📦</div>
+                <div class="feature-title">Smart Packing Management</div>
+                <div class="feature-desc">
+                    Automatically calculates materials needed. Customers choose: bring own materials,
+                    use yours, or request room-by-room packing service. All priced transparently.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <div class="feature-title">Flexible Pricing Engine</div>
+                <div class="feature-desc">
+                    Set your own rates for volume, distance, access difficulty, packing materials,
+                    and labor. Custom pricing per company. Complete control over margins.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Professional Admin Dashboard</div>
+                <div class="feature-desc">
+                    Review quotes, approve jobs, track analytics. See complete breakdown: items,
+                    access difficulty, packing requirements. Fast keyboard shortcuts.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <div class="feature-title">Your Branding, Your Domain</div>
+                <div class="feature-desc">
+                    White-label solution. Use your own domain, logo, and colors. Customers only
+                    see your brand. Professional appearance from day one.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="social-proof">
+        <h2 style="font-size: 32px; margin-bottom: 24px;">Built for Modern Removal Companies</h2>
+        <p style="font-size: 18px; color: rgba(255, 255, 255, 0.7); line-height: 1.8;">
+            "We reduced quote time from 30 minutes to 3 minutes. Our conversion rate doubled
+            because customers get instant pricing on their phone. Game changer."
+        </p>
+        <div style="margin-top: 16px; font-weight: 600;">— UK Removal Company Owner</div>
+    </div>
+
+    <div class="pricing">
+        <h2 style="font-size: 48px; margin-bottom: 16px;">Simple, Transparent Pricing</h2>
+        <p style="font-size: 20px; color: rgba(255, 255, 255, 0.7); margin-bottom: 48px;">
+            No setup fees. No long-term contracts. Cancel anytime.
+        </p>
+
+        <div class="pricing-card">
+            <div style="font-size: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; color: rgba(255, 255, 255, 0.5);">
+                Professional Plan
+            </div>
+            <div class="price">£199<span style="font-size: 24px; color: rgba(255, 255, 255, 0.5);">/month</span></div>
+            <div class="price-desc">Everything you need to run your removal company</div>
+
+            <div class="pricing-features">
+                <div class="pricing-feature">✓ Unlimited quotes</div>
+                <div class="pricing-feature">✓ AI-powered photo detection</div>
+                <div class="pricing-feature">✓ Mobile customer experience</div>
+                <div class="pricing-feature">✓ Admin dashboard</div>
+                <div class="pricing-feature">✓ Custom branding & domain</div>
+                <div class="pricing-feature">✓ Packing materials calculator</div>
+                <div class="pricing-feature">✓ Packing service management</div>
+                <div class="pricing-feature">✓ Analytics & reporting</div>
+                <div class="pricing-feature">✓ Email & SMS notifications</div>
+                <div class="pricing-feature">✓ Dedicated support</div>
+            </div>
+
+            <a href="/auth/signup" class="cta-primary" style="margin-top: 32px; width: 100%; text-align: center;">
+                Start 14-Day Free Trial
+            </a>
+            <div style="margin-top: 16px; font-size: 13px; color: rgba(255, 255, 255, 0.5);">
+                No credit card required
+            </div>
+        </div>
+    </div>
+
+    <div style="max-width: 800px; margin: 80px auto; padding: 48px 24px; text-align: center;">
+        <h2 style="font-size: 40px; margin-bottom: 24px;">Ready to modernize your removal company?</h2>
+        <p style="font-size: 18px; color: rgba(255, 255, 255, 0.7); margin-bottom: 32px;">
+            Join forward-thinking removal companies using AI to win more customers and save time.
+        </p>
+        <a href="/auth/signup" class="cta-primary">Start Free Trial</a>
+    </div>
+
+    <div style="text-align: center; padding: 48px 24px; color: rgba(255, 255, 255, 0.4); font-size: 13px;">
+        <p>&copy; 2026 PrimeHaul OS. All rights reserved.</p>
+        <p style="margin-top: 8px;">
+            <a href="mailto:hello@primehaul.co.uk" style="color: rgba(255, 255, 255, 0.6);">Contact Us</a>
+        </p>
+    </div>
+</body>
+</html>
