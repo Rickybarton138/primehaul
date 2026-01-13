@@ -8,7 +8,7 @@ Usage:
 """
 import os
 import sys
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from app.models import Base, Company, PricingConfig, User
 from app.auth import hash_password
 import uuid
@@ -54,7 +54,13 @@ def quick_reset(use_railway=False):
     engine = create_engine(database_url)
 
     print("🗑️  Dropping tables...")
-    Base.metadata.drop_all(bind=engine)
+    # Use raw SQL to drop with CASCADE (handles circular dependencies)
+    with engine.connect() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO postgres"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+        conn.commit()
 
     print("📦 Creating tables...")
     Base.metadata.create_all(bind=engine)
@@ -88,17 +94,24 @@ def quick_reset(use_railway=False):
             id=uuid.uuid4(),
             company_id=company.id,
             price_per_cbm=35.00,
-            callout_fee=150.00,
+            callout_fee=250.00,
             bulky_item_fee=25.00,
             fragile_item_fee=15.00,
-            price_per_mile=2.50,
-            free_miles=10,
-            per_floor_cost=15.00,
-            no_lift_multiplier=1.25,
-            narrow_access_fee=30.00,
-            parking_distance_per_10m=5.00,
-            weight_limit_kg=1000.0,
-            price_per_extra_kg=0.50,
+            price_per_km=2.00,
+            base_distance_km=0,
+            price_per_floor=15.00,
+            no_lift_surcharge=50.00,
+            parking_street_fee=25.00,
+            parking_permit_fee=40.00,
+            parking_limited_fee=60.00,
+            parking_distance_per_50m=10.00,
+            narrow_access_fee=35.00,
+            time_restriction_fee=25.00,
+            booking_required_fee=20.00,
+            outdoor_steps_per_5=15.00,
+            outdoor_path_fee=20.00,
+            weight_threshold_kg=1000,
+            price_per_kg_over_threshold=0.50,
             pack1_price=1.05,
             pack2_price=1.55,
             pack3_price=2.00,

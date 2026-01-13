@@ -2019,6 +2019,8 @@ def quote_preview(request: Request, company_slug: str, token: str, db: Session =
         "confidence": quote["confidence"],
         "auto_approved": quote.get("auto_approved", False),
         "breakdown": quote["breakdown"],
+        "packing_breakdown": quote.get("packing_breakdown"),
+        "access_breakdown": quote.get("access_breakdown"),
     })
 
 
@@ -2402,7 +2404,16 @@ def admin_approve_job(
             db=db
         )
 
-        # TODO: Send SMS/email to customer confirming approval
+        # Send SMS notification to customer
+        if job.customer_phone:
+            try:
+                notify_quote_approved(
+                    phone=job.customer_phone,
+                    company_name=company.company_name,
+                    booking_url=f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'localhost:8000')}/s/{company_slug}/{token}/booking"
+                )
+            except Exception as e:
+                logger.error(f"Failed to send approval SMS: {e}")
 
     return RedirectResponse(url=f"/{company_slug}/admin/dashboard", status_code=303)
 
