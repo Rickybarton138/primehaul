@@ -186,10 +186,9 @@ def staging_auth_required(credentials: HTTPBasicCredentials = Depends(security) 
 # ============================================================================
 
 @app.get("/", response_class=HTMLResponse)
-async def landing_page(request: Request, _auth: bool = Depends(staging_auth_required)):
+async def landing_page(request: Request):
     """
     Main marketing landing page for primehaul.co.uk
-    Protected by password in staging mode
     """
     return templates.TemplateResponse("landing_page.html", {"request": request})
 
@@ -686,7 +685,6 @@ async def signup_page(request: Request):
 @app.post("/auth/signup")
 async def signup(
     request: Request,
-    _auth: bool = Depends(staging_auth_required),
     company_name: str = Form(...),
     slug: str = Form(...),
     email: str = Form(...),
@@ -821,11 +819,6 @@ async def logout():
 # ============================================================================
 # CUSTOMER SURVEY ENDPOINTS
 # ============================================================================
-
-@app.get("/", response_class=HTMLResponse)
-def home():
-    """Redirect to signup page"""
-    return RedirectResponse(url="/auth/signup", status_code=302)
 
 
 @app.get("/s/{company_slug}/{token}", response_class=HTMLResponse)

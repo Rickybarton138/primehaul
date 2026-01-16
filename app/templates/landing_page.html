@@ -150,7 +150,16 @@
     </style>
 </head>
 <body>
-    <div class="hero">
+    <!-- Header -->
+    <header style="position:fixed; top:0; left:0; right:0; background:rgba(11,11,12,0.95); backdrop-filter:blur(10px); padding:16px 24px; display:flex; justify-content:space-between; align-items:center; z-index:1000; border-bottom:1px solid #2a2b2e;">
+        <div style="font-size:24px; font-weight:800; color:#2ee59d;">primehaul</div>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <a href="/auth/login" style="color:#888; text-decoration:none; font-weight:600; padding:10px 16px;">Login</a>
+            <a href="/auth/signup" style="padding:10px 20px; background:#2ee59d; color:#000; text-decoration:none; border-radius:8px; font-weight:700;">Sign Up</a>
+        </div>
+    </header>
+
+    <div class="hero" style="padding-top:100px;">
         <h1 class="hero-title">The OS for Removal Companies</h1>
         <p class="hero-subtitle">
             AI-powered quoting, mobile-first customer experience, and powerful admin tools.

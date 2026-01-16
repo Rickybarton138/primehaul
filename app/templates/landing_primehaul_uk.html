@@ -693,7 +693,10 @@
   <!-- Sticky Header -->
   <header class="sticky-header">
     <div class="logo">primehaul</div>
-    <a href="#signup" class="header-cta">Start Free Trial</a>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <a href="/auth/login" style="color:#888; text-decoration:none; font-weight:600; padding:10px 16px;">Login</a>
+      <a href="/auth/signup" class="header-cta">Start Free Trial</a>
+    </div>
   </header>
 
   <!-- Hero Section -->
@@ -705,7 +708,7 @@
       <p class="subtitle">
         Your customers snap photos, AI generates instant quotes, you approve from your phone. <strong>That's it.</strong> No more site visits. No more slow responses. Just more bookings.
       </p>
-      <a href="#signup" class="cta-button">Start Your 30-Day Free Trial</a>
+      <a href="/auth/signup" class="cta-button">Start Your 30-Day Free Trial</a>
       <div class="trial-badge">✓ No credit card required  •  ✓ Set up in 5 minutes  •  ✓ Cancel anytime</div>
 
       <div class="trust-badges">
@@ -1022,26 +1025,10 @@
 
       <div class="signup-form">
         <h3>Start Your Free 30-Day Trial</h3>
-        <form action="/auth/signup" method="post">
-          <div class="form-group">
-            <label>Company Name</label>
-            <input type="text" name="company_name" placeholder="e.g., Swift Removals Ltd" required>
-          </div>
-          <div class="form-group">
-            <label>Your Name</label>
-            <input type="text" name="name" placeholder="e.g., John Smith" required>
-          </div>
-          <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" name="email" placeholder="e.g., john@swiftremovals.co.uk" required>
-          </div>
-          <div class="form-group">
-            <label>Phone Number</label>
-            <input type="tel" name="phone" placeholder="e.g., 07700 900123" required>
-          </div>
-          <button type="submit" class="submit-button">Start Free Trial →</button>
-          <p class="form-note">✓ No credit card required  •  ✓ Cancel anytime  •  ✓ Set up in 5 minutes</p>
-        </form>
+        <p style="color:#888; margin-bottom:24px;">Create your account in under 2 minutes and start quoting today.</p>
+        <a href="/auth/signup" class="submit-button" style="display:inline-block; text-align:center; text-decoration:none; width:100%; box-sizing:border-box;">Create Your Account →</a>
+        <p class="form-note">✓ No credit card required  •  ✓ Cancel anytime  •  ✓ Set up in 5 minutes</p>
+        <p style="margin-top:16px; color:#888;">Already have an account? <a href="/auth/login" style="color:#2ee59d;">Login here</a></p>
       </div>
     </div>
   </section>
