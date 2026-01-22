@@ -824,18 +824,22 @@ async def logout():
 @app.get("/s/{company_slug}/{token}", response_class=HTMLResponse)
 def survey_start(request: Request, company_slug: str, token: str, db: Session = Depends(get_db)):
     """Start customer survey"""
+    from datetime import date
     company = request.state.company
-    get_or_create_job(company.id, token, db)
+    job = get_or_create_job(company.id, token, db)
 
-    return templates.TemplateResponse("start.html", {
+    return templates.TemplateResponse("start_v2.html", {
         "request": request,
         "token": token,
         "company_slug": company_slug,
         "branding": request.state.branding,
-        "title": f"{company.company_name} - Moving Quote",
-        "nav_title": company.company_name,
+        "title": f"Get Quote - {company.company_name}",
+        "nav_title": "Get Quote",
         "back_url": None,
-        "progress": None,
+        "progress": 10,
+        "mapbox_token": os.getenv("MAPBOX_ACCESS_TOKEN", ""),
+        "job": job,
+        "today": date.today().isoformat()
     })
 
 
