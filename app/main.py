@@ -96,12 +96,13 @@ async def resolve_and_check_company(request: Request, call_next):
                 )
 
             # Check subscription status
-            from datetime import timezone
-            now = datetime.now(timezone.utc)
+            now = datetime.utcnow()
 
             # Trial expired?
             if company.subscription_status == 'trial' and company.trial_ends_at:
-                if now > company.trial_ends_at:
+                # Make comparison timezone-naive safe
+                trial_end = company.trial_ends_at.replace(tzinfo=None) if company.trial_ends_at.tzinfo else company.trial_ends_at
+                if now > trial_end:
                     return templates.TemplateResponse("trial_expired.html", {
                         "request": request,
                         "company": company,
