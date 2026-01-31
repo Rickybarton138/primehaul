@@ -15,7 +15,7 @@
 
         <div class="card fade-in">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <h2>Subscription Status</h2>
+                <h2>Account Status</h2>
                 <a href="/{{ company_slug }}/admin/dashboard" class="btn" style="background: #555; color: #fff;">
                     Back to Dashboard
                 </a>
@@ -26,32 +26,45 @@
                 <h3 style="margin: 0 0 8px 0; color: #2ee59d;">Free Trial Active</h3>
                 <p style="margin: 0; color: #aaa;">
                     {{ subscription_info.days_remaining }} days remaining in your 14-day trial.
-                    Subscribe now to continue after trial ends.
+                    You have 3 free surveys included.
                 </p>
             </div>
 
             <div style="margin-top: 24px;">
-                <h3 style="margin-bottom: 12px;">PrimeHaul OS Professional - £99/month</h3>
+                <h3 style="margin-bottom: 12px;">Pay Per Survey - £9.99/survey</h3>
                 <ul style="color: #aaa; line-height: 1.8; margin-bottom: 24px;">
-                    <li>Unlimited AI-powered quotes</li>
-                    <li>Unlimited photo analysis</li>
+                    <li>Only pay for completed surveys</li>
+                    <li>AI-powered photo analysis included</li>
                     <li>Custom branding & pricing</li>
                     <li>Multi-user team accounts</li>
                     <li>Full analytics dashboard</li>
-                    <li>Email & phone support</li>
+                    <li>No monthly commitment</li>
                 </ul>
 
                 <form method="POST" action="/{{ company_slug }}/billing/create-checkout">
                     <button type="submit" class="btn btn-primary btn-block">
-                        Subscribe Now - £99/month
+                        Add Payment Method
                     </button>
                 </form>
+                <p style="margin-top: 12px; color: #666; font-size: 13px; text-align: center;">
+                    Add a card to continue using surveys after your trial
+                </p>
+            </div>
+
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #333;">
+                <h3 style="margin-bottom: 12px;">Need more volume?</h3>
+                <p style="color: #aaa; margin-bottom: 16px;">
+                    For companies doing 50+ surveys per month, we offer custom enterprise pricing with volume discounts.
+                </p>
+                <a href="mailto:enterprise@primehaul.co.uk" class="btn btn-block" style="background: #333; color: #fff; text-decoration: none; text-align: center;">
+                    Contact Enterprise Sales
+                </a>
             </div>
             {% elif subscription_info.status == 'active' %}
             <div class="alert" style="background: rgba(46, 229, 157, 0.1); border-left: 4px solid #2ee59d;">
-                <h3 style="margin: 0 0 8px 0; color: #2ee59d;">Subscription Active</h3>
+                <h3 style="margin: 0 0 8px 0; color: #2ee59d;">Account Active</h3>
                 <p style="margin: 0; color: #aaa;">
-                    Your subscription is active. You have unlimited access to all features.
+                    Your payment method is set up. You'll be charged £9.99 per completed survey.
                 </p>
             </div>
 
@@ -60,23 +73,23 @@
                 <div style="background: #222; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <h4 style="margin: 0; color: #fff;">PrimeHaul OS Professional</h4>
-                            <p style="margin: 8px 0 0 0; color: #888;">Unlimited quotes and features</p>
+                            <h4 style="margin: 0; color: #fff;">Pay Per Survey</h4>
+                            <p style="margin: 8px 0 0 0; color: #888;">Charged per completed survey</p>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 32px; font-weight: 700; color: #2ee59d;">£99</div>
-                            <div style="color: #888; font-size: 14px;">per month</div>
+                            <div style="font-size: 32px; font-weight: 700; color: #2ee59d;">£9.99</div>
+                            <div style="color: #888; font-size: 14px;">per survey</div>
                         </div>
                     </div>
                 </div>
 
                 <form method="POST" action="/{{ company_slug }}/billing/manage">
                     <button type="submit" class="btn btn-block" style="background: #444;">
-                        Manage Subscription
+                        Manage Payment Method
                     </button>
                 </form>
                 <p style="margin-top: 12px; color: #666; font-size: 13px; text-align: center;">
-                    Update payment method, view invoices, or cancel subscription
+                    Update payment method or view invoices
                 </p>
             </div>
             {% elif subscription_info.status == 'past_due' %}
@@ -96,26 +109,26 @@
             </div>
             {% else %}
             <div class="alert alert-error">
-                <h3 style="margin: 0 0 8px 0;">Subscription Required</h3>
+                <h3 style="margin: 0 0 8px 0;">Payment Method Required</h3>
                 <p style="margin: 0;">
-                    Subscribe to PrimeHaul OS to access all features and generate unlimited quotes.
+                    Add a payment method to continue generating AI-powered surveys.
                 </p>
             </div>
 
             <div style="margin-top: 24px;">
-                <h3 style="margin-bottom: 12px;">PrimeHaul OS Professional - £99/month</h3>
+                <h3 style="margin-bottom: 12px;">Pay Per Survey - £9.99/survey</h3>
                 <ul style="color: #aaa; line-height: 1.8; margin-bottom: 24px;">
-                    <li>Unlimited AI-powered quotes</li>
-                    <li>Unlimited photo analysis</li>
+                    <li>Only pay for completed surveys</li>
+                    <li>AI-powered photo analysis included</li>
                     <li>Custom branding & pricing</li>
                     <li>Multi-user team accounts</li>
                     <li>Full analytics dashboard</li>
-                    <li>Email & phone support</li>
+                    <li>No monthly commitment</li>
                 </ul>
 
                 <form method="POST" action="/{{ company_slug }}/billing/create-checkout">
                     <button type="submit" class="btn btn-primary btn-block">
-                        Subscribe Now - £99/month
+                        Add Payment Method
                     </button>
                 </form>
             </div>
@@ -123,7 +136,7 @@
         </div>
 
         <div style="text-align: center; margin-top: 32px; color: #666; font-size: 13px;">
-            <p>&copy; 2025 PrimeHaul OS. All rights reserved.</p>
+            <p>&copy; 2026 PrimeHaul OS. All rights reserved.</p>
         </div>
     </div>
 </body>
