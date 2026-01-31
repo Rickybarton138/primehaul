@@ -106,7 +106,7 @@
   </style>
 
   <script>
-    let currentItems = {{ items_json.items | tojson | safe }};
+    let currentItems = {{ items_json.get('items', []) | tojson | safe }};
 
     async function deleteItem(index, itemName) {
       if (!confirm(`Remove "${itemName}" from this room?`)) return;
