@@ -3,7 +3,11 @@
 {% block content %}
   {% set room_icons = {
     "Living room": "🛋️",
-    "Bedroom": "🛏️",
+    "Bed 1": "🛏️",
+    "Bed 2": "🛏️",
+    "Bed 3": "🛏️",
+    "Bed 4": "🛏️",
+    "Bed 5": "🛏️",
     "Kitchen": "🍳",
     "Bathroom": "🚿",
     "Dining room": "🍽️",
@@ -79,34 +83,59 @@
   </div>
 
   <style>
-    .item-delete-btn {
+    .item-btn {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 6px;
-      padding: 8px;
+      padding: 6px 10px;
       cursor: pointer;
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .item-btn:active {
+      transform: scale(0.95);
+    }
+    .item-increment-btn:hover {
+      background: rgba(46, 229, 157, 0.15);
+      border-color: rgba(46, 229, 157, 0.3);
+      color: #2ee59d;
     }
     .item-delete-btn:hover {
       background: rgba(255, 80, 80, 0.15);
       border-color: rgba(255, 80, 80, 0.3);
-    }
-    .item-delete-btn:active {
-      transform: scale(0.95);
-    }
-    .item-delete-btn svg {
-      color: rgba(255, 255, 255, 0.6);
-    }
-    .item-delete-btn:hover svg {
       color: #ff5050;
     }
   </style>
 
   <script>
     let currentItems = {{ items_json.get('items', []) | tojson | safe }};
+
+    async function incrementItem(index, itemName) {
+      try {
+        const response = await fetch("/s/{{ company_slug }}/{{ token }}/room/{{ room_id }}/increment-item/" + index, {
+          method: "POST"
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Update local array
+          currentItems[index].qty = data.new_qty;
+          // Re-render
+          renderItems(currentItems);
+          showToast(`${itemName} x${data.new_qty}`);
+        } else {
+          showToast("Failed to update item");
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("Error updating item");
+      }
+    }
 
     async function deleteItem(index, itemName) {
       if (!confirm(`Remove "${itemName}" from this room?`)) return;
@@ -215,14 +244,10 @@
                 <div class="itemname">${qty}x ${name}</div>
                 ${notes ? `<div class="itemnotes">${notes}</div>` : ''}
               </div>
-              <div style="display:flex; align-items:center; gap:8px;">
+              <div style="display:flex; align-items:center; gap:6px;">
                 ${bulky ? '<span class="badge">Bulky</span>' : ''}
-                <button class="item-delete-btn" onclick="deleteItem(${idx}, '${escapeHtml(name)}')" title="Remove this item">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
+                <button class="item-btn item-increment-btn" onclick="incrementItem(${idx}, '${escapeHtml(name)}')" title="Add another">+1</button>
+                <button class="item-btn item-delete-btn" onclick="deleteItem(${idx}, '${escapeHtml(name)}')" title="Remove this item">✕</button>
               </div>
             </div>
           `;

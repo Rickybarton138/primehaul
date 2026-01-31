@@ -8,7 +8,11 @@
     <div class="chipgrid">
       {% set room_icons = {
         "Living room": "🛋️",
-        "Bedroom": "🛏️",
+        "Bed 1": "🛏️",
+        "Bed 2": "🛏️",
+        "Bed 3": "🛏️",
+        "Bed 4": "🛏️",
+        "Bed 5": "🛏️",
         "Kitchen": "🍳",
         "Bathroom": "🚿",
         "Dining room": "🍽️",
@@ -19,7 +23,7 @@
         "Garden": "🌳",
         "Other": "➕"
       } %}
-      {% for opt in ["Living room","Bedroom","Kitchen","Bathroom","Dining room","Hallway","Office","Garage","Loft","Garden","Other"] %}
+      {% for opt in ["Living room","Bed 1","Bed 2","Bed 3","Bed 4","Bed 5","Kitchen","Bathroom","Dining room","Hallway","Office","Garage","Loft","Garden","Other"] %}
         <form method="post" action="/s/{{ company_slug }}/{{ token }}/rooms/add">
           <input type="hidden" name="room_name" value="{{ opt }}" />
           <button class="chip" type="submit">{{ room_icons[opt] }} {{ opt }}</button>
@@ -42,7 +46,11 @@
       <div class="invlist">
         {% set room_icons = {
           "Living room": "🛋️",
-          "Bedroom": "🛏️",
+          "Bed 1": "🛏️",
+          "Bed 2": "🛏️",
+          "Bed 3": "🛏️",
+          "Bed 4": "🛏️",
+          "Bed 5": "🛏️",
           "Kitchen": "🍳",
           "Bathroom": "🚿",
           "Dining room": "🍽️",

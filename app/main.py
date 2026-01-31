@@ -1606,6 +1606,41 @@ def delete_room_item(
     return JSONResponse({"success": True, "message": "Item deleted"})
 
 
+@app.post("/s/{company_slug}/{token}/room/{room_id}/increment-item/{item_index}")
+def increment_room_item(
+    request: Request,
+    company_slug: str,
+    token: str,
+    room_id: str,
+    item_index: int,
+    db: Session = Depends(get_db)
+):
+    """Increment quantity of a specific item by 1"""
+    company = request.state.company
+    job = get_or_create_job(company.id, token, db)
+
+    # Get room
+    room = db.query(Room).filter(Room.id == room_id, Room.job_id == job.id).first()
+    if not room:
+        return JSONResponse({"error": "Room not found"}, status_code=404)
+
+    # Get all items for this room
+    items = db.query(Item).filter(Item.room_id == room.id).order_by(Item.id).all()
+
+    # Validate index
+    if item_index < 0 or item_index >= len(items):
+        return JSONResponse({"error": "Invalid item index"}, status_code=400)
+
+    # Increment the item quantity
+    item = items[item_index]
+    item.qty = (item.qty or 1) + 1
+    db.commit()
+
+    logger.info(f"Incremented item '{item.name}' to qty {item.qty} in room {room.name} (job {token})")
+
+    return JSONResponse({"success": True, "new_qty": item.qty})
+
+
 @app.post("/s/{company_slug}/{token}/room/{room_id}/confirm_items")
 def room_confirm_items(company_slug: str, token: str, room_id: str):
     """Process confirmed items - redirect to rooms list"""
