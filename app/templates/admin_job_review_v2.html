@@ -235,7 +235,7 @@
 
         <!-- Price Edit Form -->
         <div class="price-edit-form" id="priceEditForm">
-          <form method="post" action="/admin/job/{{ token }}/update-price">
+          <form method="post" action="/{{ company_slug }}/admin/job/{{ token }}/update-price">
             <div style="font-weight:700; margin-bottom:12px;">Override AI Pricing</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
               <div>
@@ -610,7 +610,7 @@
           </div>
         {% endif %}
 
-        <form method="post" action="/admin/job/{{ token }}/add-note" style="margin-top:12px;">
+        <form method="post" action="/{{ company_slug }}/admin/job/{{ token }}/add-note" style="margin-top:12px;">
           <textarea
             name="note"
             placeholder="Add internal note (not visible to customer)..."
@@ -657,9 +657,9 @@
                             <div class="itemnotes">{{ item.notes }}</div>
                           {% endif %}
                           <div class="itemnotes">
-                            {{ item.length_cm }}×{{ item.width_cm }}×{{ item.height_cm }}cm
-                            • {{ item.weight_kg }}kg
-                            • {{ item.cbm }} m³
+                            {{ item.length_cm or 0 }}×{{ item.width_cm or 0 }}×{{ item.height_cm or 0 }}cm
+                            • {{ item.weight_kg or 0 }}kg
+                            • {{ item.cbm or 0 }} m³
                           </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -670,7 +670,7 @@
                             <span class="badge" style="background:rgba(255,165,0,.15); color:#ffa500;">Fragile</span>
                           {% endif %}
                           <button
-                            onclick="openCorrection('{{ item.id }}', '{{ item.name }}', '{{ item.category }}', {{ item.length_cm }}, {{ item.width_cm }}, {{ item.height_cm }}, {{ item.weight_kg }})"
+                            onclick="openCorrection('{{ item.id }}', '{{ item.name }}', '{{ item.item_category or "" }}', {{ item.length_cm or 0 }}, {{ item.width_cm or 0 }}, {{ item.height_cm or 0 }}, {{ item.weight_kg or 0 }})"
                             class="btn secondary"
                             style="padding:6px 12px; font-size:12px; margin:0; white-space:nowrap;"
                             title="Train AI - Correct this detection"
@@ -695,7 +695,7 @@
     {% if job.status == 'awaiting_approval' %}
       <div class="footer footer-clean">
         <div class="footer-inner">
-          <form method="post" action="/admin/job/{{ token }}/approve">
+          <form method="post" action="/{{ company_slug }}/admin/job/{{ token }}/approve">
             <button class="btn" type="submit" style="background:#2ee59d; color:#000;">
               ✅ Approve Quote <kbd style="margin-left:8px; opacity:.7;">A</kbd>
             </button>
@@ -711,7 +711,7 @@
       <div id="rejectModal" class="overlay" style="display:none;">
         <div class="modal">
           <div class="modal-title">Reject Quote</div>
-          <form method="post" action="/admin/job/{{ token }}/reject">
+          <form method="post" action="/{{ company_slug }}/admin/job/{{ token }}/reject">
             <div style="margin:12px 0;">
               <label for="reason" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px;">
                 Reason (optional)
