@@ -2845,6 +2845,7 @@ def admin_job_review(
         "title": f"Review Job {token[:8]} — PrimeHaul OS",
         "token": token,
         "job": job,
+        "company": company,
         "quote": quote,
         "breakdown": quote.get("breakdown"),
         "packing_breakdown": quote.get("packing_breakdown"),
