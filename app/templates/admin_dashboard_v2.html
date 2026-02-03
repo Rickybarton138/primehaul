@@ -285,7 +285,7 @@
                         • {{ job.total_weight_kg or 0 }} kg
                       </span>
                       <span class="photo-count">
-                        📸 {{ job.rooms|map(attribute='photos')|map('length')|sum if job.rooms else 0 }}
+                        📸 {% set photo_count = 0 %}{% for r in (job.rooms or []) %}{% set photo_count = photo_count + (r.photos|length if r.photos else 0) %}{% endfor %}{{ photo_count }}
                       </span>
                     </div>
                     <div style="display:flex; gap:8px;">
@@ -297,7 +297,7 @@
                       </a>
                     </div>
                   </div>
-                  {% if job.pickup and job.dropoff %}
+                  {% if job.pickup and job.dropoff and job.pickup.label and job.dropoff.label %}
                     <div style="font-size:11px; color:var(--muted); margin-top:8px;">
                       📍 {{ job.pickup.label[:40] }}... → {{ job.dropoff.label[:40] }}...
                     </div>
