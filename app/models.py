@@ -410,6 +410,11 @@ class Photo(Base):
     # Relationships
     room = relationship("Room", back_populates="photos")
 
+    @property
+    def url(self):
+        """Return the URL to access this photo"""
+        return f"/static/{self.storage_path}"
+
 
 class AdminNote(Base):
     """
