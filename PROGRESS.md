@@ -3,7 +3,7 @@
 **Last Updated:** 4 February 2026
 **Repository:** github.com/jaybo1431/primehaul
 **Branch:** main
-**Latest Commit:** `8102e2e`
+**Latest Commit:** `e089b02`
 
 ---
 
@@ -106,9 +106,25 @@ Each variant has pre-set dimensions (length, width, height, weight, CBM). Correc
 - `app/templates/room_scan.html` — Variant dropdown, JS scope fix, client-side variant lookup
 - `app/templates/admin_dashboard_v2.html` — Added "Company Details" nav link
 
+### HTTPS Security Fix
+
+**Problem:** Multiple hardcoded `http://192.168.0.139:8000` URLs in SMS booking links sent to customers. Auth cookies set to `secure=False`. Stripe redirect URLs defaulted to `http://localhost`. No proxy header trust for Railway's SSL termination.
+
+**Fixes:**
+
+| Fix | Details |
+|-----|---------|
+| Booking SMS links | Replaced 2x hardcoded local IP with `RAILWAY_PUBLIC_DOMAIN` env var |
+| Stripe redirects | Changed `APP_URL` default from `http://localhost` to `https://primehaul.co.uk` |
+| Auth cookies | `secure=False` → `secure=True` (2 spots: login + signup) |
+| Proxy headers | Added `ProxyHeadersMiddleware` to trust Railway's `X-Forwarded-Proto` |
+
+**Note:** Ensure `RAILWAY_PUBLIC_DOMAIN` is set to `primehaul.co.uk` in Railway env vars.
+
 ### Commits
 
 ```
+e089b02 Fix: HTTPS security — remove hardcoded local IPs, secure cookies, trust proxy headers
 8102e2e Feature: Glowing packing CTA, company details settings, furniture variant toggle
 1b4e8cf Update progress log with Feb 3-4 session notes
 1b1d345 Remove voice input buttons from survey start page
