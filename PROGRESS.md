@@ -3,7 +3,7 @@
 **Last Updated:** 4 February 2026
 **Repository:** github.com/jaybo1431/primehaul
 **Branch:** main
-**Latest Commit:** `b41a470`
+**Latest Commit:** `8102e2e`
 
 ---
 
@@ -27,8 +27,10 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 - AI-powered inventory detection from photos (GPT-4 Vision)
 - **Multiple bedroom support**: Bed 1, Bed 2, Bed 3, Bed 4, Bed 5
 - **+1 duplicate button**: Quickly add more of same item
+- **Furniture variant toggle**: Customers can adjust sizes (e.g. 3-seater sofa → 2-seater)
 - **Kitchen box estimation**: AI estimates boxes for cupboard contents
 - **Wardrobe boxes**: Hanging clothes converted to wardrobe boxes
+- **Glowing packing CTA**: "Need help packing?" always visible with glow animation
 - Instant quote generation with company's custom pricing
 - Terms & Conditions acceptance tracking
 - Deposit payment via Stripe
@@ -39,6 +41,7 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 - **Quick Approve** - Approve quotes in 30 seconds
 - **Job Review** - View photos, inventory, edit prices, correct AI detections
 - **Recently Approved** - View approved quotes
+- **Company Details** - Edit company name, email, phone number
 - **Settings** - Pricing, Branding, Analytics, T&Cs (all with onboarding tips)
 
 ### Billing
@@ -55,7 +58,65 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 
 ---
 
-## Session Log: 4 February 2026
+## Session Log: 4 February 2026 (Evening)
+
+### Glowing Packing Service CTA
+
+**Problem:** The "Need help packing?" upsell was hidden in a collapsed `<details>` dropdown — customers almost certainly never saw it.
+
+**Solution:** Replaced with an always-visible card with a green glowing pulse animation (`@keyframes glowPulse`). Room checkboxes have green accents when selected. Clear "This is optional" note at the bottom.
+
+### Admin Company Details Settings
+
+**Problem:** Company name, email, and phone were set at signup and could never be changed.
+
+**Solution:** New admin settings page at `/{slug}/admin/company-details` with:
+- Editable company name, email, phone fields
+- Email format validation and uniqueness check
+- Phone format validation
+- Slug shown as read-only (used in customer URLs)
+- Navigation link added to admin dashboard
+
+### Furniture Size/Variant Toggle
+
+**Problem:** AI detects "3-seater sofa" but the customer has a 2-seater. They could only delete or +1, never correct the size. Lost ML training signal.
+
+**Solution:** Compact dropdown appears below furniture items in room scan, covering 15 categories:
+- Sofas (2/3/4-seater, corner, sofa bed, leather)
+- Wardrobes (single/double/triple)
+- Beds (single/double/king/super king)
+- Dining tables (2/4/6/8-seater)
+- Mattresses, desks, chests of drawers, bookcases, TVs, fridges, washing machines, armchairs, dining chairs, sideboards, TV stands
+
+Each variant has pre-set dimensions (length, width, height, weight, CBM). Corrections saved as `ItemFeedback` records for ML training. Original AI detection preserved in item notes.
+
+### Bug Fix: Room Scan JS Scoping
+
+**Problem:** `showToast`, `renderItems`, `escapeHtml` were defined inside an IIFE but called from `incrementItem`/`deleteItem` outside it — the +1 and delete buttons were silently broken.
+
+**Fix:** Moved shared functions to top-level script scope. Added `renderItems(currentItems)` call on page load so server-rendered items get interactive buttons.
+
+### Files Modified
+
+- `app/variants.py` — **New**: 15 furniture categories with variant dimensions
+- `app/templates/admin_company_details.html` — **New**: Company details settings page
+- `app/main.py` — 3 new endpoints (company details GET/POST, variant update POST), modified room_scan_get
+- `app/templates/quote_preview.html` — Replaced hidden packing dropdown with glowing CTA card
+- `app/static/app.css` — Added `glowPulse` keyframe animation
+- `app/templates/room_scan.html` — Variant dropdown, JS scope fix, client-side variant lookup
+- `app/templates/admin_dashboard_v2.html` — Added "Company Details" nav link
+
+### Commits
+
+```
+8102e2e Feature: Glowing packing CTA, company details settings, furniture variant toggle
+1b4e8cf Update progress log with Feb 3-4 session notes
+1b1d345 Remove voice input buttons from survey start page
+```
+
+---
+
+## Session Log: 4 February 2026 (Morning)
 
 ### Bulky Item Weight Threshold Fix
 
@@ -216,8 +277,10 @@ MAPBOX_ACCESS_TOKEN=pk.eyJ...
 | Main app | `app/main.py` |
 | Models | `app/models.py` |
 | AI Vision | `app/ai_vision.py` |
+| Furniture Variants | `app/variants.py` |
 | Dashboard | `app/templates/admin_dashboard_v2.html` |
 | Job Review | `app/templates/admin_job_review_v2.html` |
+| Company Details | `app/templates/admin_company_details.html` |
 | Landing page | `app/templates/landing_primehaul_uk.html` |
 | Survey start | `app/templates/start_v2.html` |
 | Room selection | `app/templates/rooms_pick.html` |
