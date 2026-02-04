@@ -13,26 +13,16 @@
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--muted);">
           Pickup address
         </label>
-        <div style="position:relative;">
-          <input
-            type="text"
-            id="pickup-input"
-            name="pickup_label"
-            class="form-input"
-            placeholder="Enter or speak your current address..."
-            autocomplete="off"
-            required
-            value="{{ job.pickup.label if job and job.pickup else '' }}"
-          />
-          <button type="button" id="pickup-voice-btn" class="voice-btn" title="Speak address">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="23"></line>
-              <line x1="8" y1="23" x2="16" y2="23"></line>
-            </svg>
-          </button>
-        </div>
+        <input
+          type="text"
+          id="pickup-input"
+          name="pickup_label"
+          class="form-input"
+          placeholder="Enter your current address..."
+          autocomplete="off"
+          required
+          value="{{ job.pickup.label if job and job.pickup else '' }}"
+        />
         <input type="hidden" id="pickup-lat" name="pickup_lat" value="{{ job.pickup.lat if job and job.pickup else '' }}" />
         <input type="hidden" id="pickup-lng" name="pickup_lng" value="{{ job.pickup.lng if job and job.pickup else '' }}" />
         <div id="pickup-suggestions" class="suggestions-dropdown"></div>
@@ -42,26 +32,16 @@
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--muted);">
           Delivery address
         </label>
-        <div style="position:relative;">
-          <input
-            type="text"
-            id="dropoff-input"
-            name="dropoff_label"
-            class="form-input"
-            placeholder="Enter or speak your new address..."
-            autocomplete="off"
-            required
-            value="{{ job.dropoff.label if job and job.dropoff else '' }}"
-          />
-          <button type="button" id="dropoff-voice-btn" class="voice-btn" title="Speak address">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="23"></line>
-              <line x1="8" y1="23" x2="16" y2="23"></line>
-            </svg>
-          </button>
-        </div>
+        <input
+          type="text"
+          id="dropoff-input"
+          name="dropoff_label"
+          class="form-input"
+          placeholder="Enter your new address..."
+          autocomplete="off"
+          required
+          value="{{ job.dropoff.label if job and job.dropoff else '' }}"
+        />
         <input type="hidden" id="dropoff-lat" name="dropoff_lat" value="{{ job.dropoff.lat if job and job.dropoff else '' }}" />
         <input type="hidden" id="dropoff-lng" name="dropoff_lng" value="{{ job.dropoff.lng if job and job.dropoff else '' }}" />
         <div id="dropoff-suggestions" class="suggestions-dropdown"></div>
