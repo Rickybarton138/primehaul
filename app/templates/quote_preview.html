@@ -49,9 +49,6 @@
           </div>
         </div>
       </div>
-      <div style="margin-top:12px; padding:12px; border-radius:8px; background:rgba(255,255,255,.05); font-size:13px; color:var(--muted); border:1px solid rgba(255,255,255,.1);">
-        Our team will review your inventory and confirm within 2 hours
-      </div>
     </div>
 
     <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">
@@ -171,68 +168,39 @@
 
     {% if packing_service_breakdown and packing_service_breakdown.rooms %}
     <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">
-      <div style="padding:18px; border-radius:14px; background:rgba(46,229,157,.06); border:2px solid rgba(46,229,157,.3); animation:glowPulse 2.5s ease-in-out infinite;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-          <div style="width:40px; height:40px; border-radius:10px; background:rgba(46,229,157,.15); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;">📦</div>
-          <div>
-            <div style="font-weight:700; font-size:17px; color:#2ee59d;">Need help packing?</div>
-            <div style="font-size:13px; color:var(--muted);">We'll pack for you — materials and labor included</div>
-          </div>
-        </div>
-
-        <form id="packingServiceForm" method="post" action="/s/{{ company_slug }}/{{ token }}/packing-service" style="display:flex; flex-direction:column; gap:8px;">
-          {% for room in packing_service_breakdown.rooms %}
-          <label style="display:flex; align-items:center; padding:14px; border-radius:12px; background:{% if room.is_selected %}rgba(46,229,157,.1){% else %}rgba(255,255,255,.05){% endif %}; border:1px solid {% if room.is_selected %}rgba(46,229,157,.35){% else %}rgba(255,255,255,.1){% endif %}; cursor:pointer; transition:all 0.2s;">
-            <input type="checkbox" name="room_ids" value="{{ room.room_id }}" {% if room.is_selected %}checked{% endif %} style="margin-right:12px; accent-color:#2ee59d;" onchange="document.getElementById('packingServiceForm').submit()">
-            <div style="flex:1;">
-              <div style="font-weight:600; margin-bottom:3px;">{{ room.room_name }}</div>
-              <div style="font-size:12px; color:var(--muted);">{{ room.items_count }} items · ~{{ room.hours }}h packing</div>
-            </div>
-            <div style="font-weight:700; font-size:16px; color:#2ee59d;">+£{{ "%.0f"|format(room.cost) }}</div>
-          </label>
-          {% endfor %}
-
+      <details style="border-radius:12px; background:rgba(46,229,157,.06); border:1px solid rgba(46,229,157,.3);">
+        <summary style="padding:16px; cursor:pointer; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:20px;">📦</span>
+          <span style="flex:1; font-weight:700; color:#2ee59d;">Need help packing?</span>
           {% if packing_service_breakdown.total_cost > 0 %}
-          <div style="margin-top:8px; padding:14px; border-radius:12px; background:rgba(46,229,157,.12); border:1px solid rgba(46,229,157,.35);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <div style="font-weight:700; margin-bottom:3px;">Packing service total</div>
-                <div style="font-size:13px; color:var(--muted);">{{ packing_service_breakdown.total_hours }}h labor + materials included</div>
-              </div>
-              <div style="font-weight:700; font-size:20px; color:#2ee59d;">+£{{ "%.0f"|format(packing_service_breakdown.total_cost) }}</div>
-            </div>
-          </div>
+          <span style="font-weight:700; color:#2ee59d;">+£{{ "%.0f"|format(packing_service_breakdown.total_cost) }}</span>
           {% endif %}
-        </form>
-
-        <div style="margin-top:12px; font-size:12px; color:var(--muted); text-align:center;">
-          This is optional — uncheck all rooms to skip
+        </summary>
+        <div style="padding:0 16px 16px 16px;">
+          <form id="packingServiceForm" method="post" action="/s/{{ company_slug }}/{{ token }}/packing-service" style="display:flex; flex-direction:column; gap:8px;">
+            {% for room in packing_service_breakdown.rooms %}
+            <label style="display:flex; align-items:center; padding:12px; border-radius:10px; background:{% if room.is_selected %}rgba(46,229,157,.1){% else %}rgba(255,255,255,.05){% endif %}; border:1px solid {% if room.is_selected %}rgba(46,229,157,.35){% else %}rgba(255,255,255,.1){% endif %}; cursor:pointer;">
+              <input type="checkbox" name="room_ids" value="{{ room.room_id }}" {% if room.is_selected %}checked{% endif %} style="margin-right:12px; accent-color:#2ee59d;" onchange="document.getElementById('packingServiceForm').submit()">
+              <div style="flex:1;">
+                <div style="font-weight:600;">{{ room.room_name }}</div>
+                <div style="font-size:12px; color:var(--muted);">{{ room.items_count }} items</div>
+              </div>
+              <div style="font-weight:700; color:#2ee59d;">+£{{ "%.0f"|format(room.cost) }}</div>
+            </label>
+            {% endfor %}
+          </form>
+          <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:center;">Optional — labor + materials included</div>
         </div>
-      </div>
+      </details>
     </div>
     {% endif %}
 
     {% if company.tcs_document_url %}
-    <!-- Terms & Conditions Preview -->
-    <div class="group">
-      <div style="font-weight:700; margin-bottom:12px;">📋 Terms & Conditions</div>
-      <div style="padding:14px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap: wrap;">
-          <div style="flex:1; min-width: 200px;">
-            <div style="font-weight:600; margin-bottom:4px;">Review Our Terms</div>
-            <div style="font-size:13px; color:var(--muted);">
-              {% if company.tcs_enabled %}
-              You'll need to accept these before booking
-              {% else %}
-              Available for your reference
-              {% endif %}
-            </div>
-          </div>
-          <a href="/s/{{ company_slug }}/{{ token }}/tcs/view" target="_blank" style="padding:10px 16px; background:rgba(255,255,255,.1); border-radius:8px; text-decoration:none; color:var(--text); font-weight:600; font-size:14px; white-space:nowrap;">
-            View PDF →
-          </a>
-        </div>
-      </div>
+    <div style="margin-top:16px; padding:12px 16px; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); display:flex; align-items:center; justify-content:space-between;">
+      <span style="font-size:13px; color:var(--muted);">Terms & Conditions</span>
+      <a href="/s/{{ company_slug }}/{{ token }}/tcs/view" target="_blank" style="padding:8px 14px; background:rgba(255,255,255,.08); border-radius:6px; text-decoration:none; color:var(--text); font-weight:600; font-size:13px;">
+        View →
+      </a>
     </div>
     {% endif %}
   </div>
@@ -252,7 +220,7 @@
         <form method="post" action="/s/{{ company_slug }}/{{ token }}/submit-quote">
           <button class="btn" type="submit">Submit for review</button>
           <div class="microhint" style="text-align:center; margin-top:8px;">
-            Our team will confirm your quote within 2 hours
+            Usually confirmed within 2 hours
           </div>
         </form>
       {% elif job.status == 'awaiting_approval' %}

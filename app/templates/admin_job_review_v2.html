@@ -124,7 +124,6 @@
       <div class="nav-inner">
         <a href="/{{ company_slug }}/admin/dashboard" class="nav-back">← Dashboard</a>
         <div class="nav-center">Job #{{ token[:8] }}</div>
-        <button onclick="showKeyboardShortcuts()" style="background:none; border:none; color:var(--text); opacity:.8; cursor:pointer;">⌘</button>
       </div>
     </div>
 
@@ -179,35 +178,13 @@
         </div>
       {% endif %}
 
-      <!-- T&Cs Acceptance Status -->
       {% if job.terms_acceptance %}
-      <div class="group" style="background:rgba(46,229,157,.08); border:1px solid rgba(46,229,157,.2);">
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2ee59d" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-          <span style="font-weight:700; color:#2ee59d;">Terms & Conditions Accepted</span>
-        </div>
-        <div style="font-size:13px; color:#aaa; margin-left:32px;">
-          <div style="margin-bottom:4px;">Version: <strong>{{ job.terms_acceptance.tcs_version }}</strong></div>
-          <div style="margin-bottom:4px;">Accepted: <strong>{{ job.terms_acceptance.created_at.strftime('%d %B %Y at %H:%M') }}</strong></div>
-          <div>IP Address: <strong>{{ job.terms_acceptance.ip_address }}</strong></div>
-        </div>
+      <div style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:6px; background:rgba(46,229,157,.1); font-size:12px; color:#2ee59d; font-weight:600;">
+        ✓ T&Cs accepted
       </div>
       {% elif company.tcs_enabled %}
-      <div class="group" style="background:rgba(255,165,0,.08); border:1px solid rgba(255,165,0,.2);">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffa500" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <span style="font-weight:700; color:#ffa500;">T&Cs Acceptance Pending</span>
-        </div>
-        <div style="font-size:13px; color:#aaa; margin-left:32px; margin-top:4px;">
-          Customer must accept Terms & Conditions before booking
-        </div>
+      <div style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:6px; background:rgba(255,165,0,.1); font-size:12px; color:#ffa500; font-weight:600;">
+        T&Cs pending
       </div>
       {% endif %}
 
@@ -314,38 +291,42 @@
           </div>
         </div>
 
-        <!-- Pricing Breakdown -->
-        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">
-          <div style="font-weight:700; margin-bottom:12px;">💰 AI Pricing Breakdown</div>
-          <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
+        <!-- Pricing Breakdown - Collapsible -->
+        <details style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">
+          <summary style="cursor:pointer; font-weight:600; font-size:13px; color:var(--muted);">View price breakdown</summary>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:13px; margin-top:12px;">
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:var(--muted);">Base callout:</span>
-              <strong>£{{ quote.breakdown.base }}</strong>
+              <span style="color:var(--muted);">Base:</span>
+              <span>£{{ quote.breakdown.base }}</span>
             </div>
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:var(--muted);">Volume ({{ quote.total_cbm }} m³ × £35):</span>
-              <strong>£{{ "%.2f"|format(quote.breakdown.volume) }}</strong>
+              <span style="color:var(--muted);">Volume ({{ quote.total_cbm }} m³):</span>
+              <span>£{{ "%.0f"|format(quote.breakdown.volume) }}</span>
             </div>
+            {% if quote.breakdown.bulky > 0 %}
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:var(--muted);">Bulky surcharge:</span>
-              <strong>£{{ quote.breakdown.bulky }}</strong>
+              <span style="color:var(--muted);">Bulky:</span>
+              <span>£{{ quote.breakdown.bulky }}</span>
             </div>
+            {% endif %}
+            {% if quote.breakdown.fragile > 0 %}
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:var(--muted);">Fragile surcharge:</span>
-              <strong>£{{ quote.breakdown.fragile }}</strong>
+              <span style="color:var(--muted);">Fragile:</span>
+              <span>£{{ quote.breakdown.fragile }}</span>
             </div>
+            {% endif %}
             {% if quote.breakdown.weight > 0 %}
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:var(--muted);">Weight surcharge:</span>
-              <strong>£{{ "%.2f"|format(quote.breakdown.weight) }}</strong>
+              <span style="color:var(--muted);">Weight:</span>
+              <span>£{{ "%.0f"|format(quote.breakdown.weight) }}</span>
             </div>
             {% endif %}
             <div style="display:flex; justify-content:space-between;">
-              <span style="color:var(--muted);">Distance ({{ "%.1f"|format(quote.distance_miles) }} miles):</span>
-              <strong>£{{ "%.2f"|format(quote.breakdown.distance) }}</strong>
+              <span style="color:var(--muted);">Distance ({{ "%.0f"|format(quote.distance_miles) }} mi):</span>
+              <span>£{{ "%.0f"|format(quote.breakdown.distance) }}</span>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Route Info -->
         <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">

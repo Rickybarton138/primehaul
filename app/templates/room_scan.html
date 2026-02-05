@@ -19,7 +19,7 @@
     "Other": "➕"
   } %}
   <div class="largetitle">{{ room_icons.get(room_name, "📦") }} {{ room_name }}</div>
-  <p class="subtitle">Take a few wide-angle photos. Our AI will automatically detect everything.</p>
+  <p class="subtitle">Take photos and we'll detect your items</p>
 
   <div id="liveToast" class="toast hidden" role="status" aria-live="polite"></div>
 
@@ -34,7 +34,7 @@
     </div>
 
     <div class="hint" style="margin-top:10px;">
-      💡 <strong>Pro tip:</strong> Start with a wide shot of the whole room, then add close-ups of any small items.
+      Wide shots work best
     </div>
   </div>
 
@@ -76,7 +76,7 @@
       {% else %}
         <div class="empty" id="emptyState">
           <div class="empty-title">No items yet</div>
-          <div class="empty-sub">Take photos and our AI will detect everything automatically!</div>
+          <div class="empty-sub">Take photos to detect items</div>
         </div>
       {% endif %}
     </div>
@@ -166,7 +166,7 @@
 
     function renderItems(items){
       if(!items || items.length === 0){
-        _itemsList.innerHTML = '<div class="empty"><div class="empty-title">No items yet</div><div class="empty-sub">Take photos and our AI will detect everything automatically!</div></div>';
+        _itemsList.innerHTML = '<div class="empty"><div class="empty-title">No items yet</div><div class="empty-sub">Take photos to detect items</div></div>';
         _itemsStatus.textContent = "0 items";
         return;
       }
@@ -394,9 +394,6 @@
   <div class="footer footer-clean">
     <div class="footer-inner">
       <a class="btn" href="/s/{{ company_slug }}/{{ token }}/rooms">✓ Done with this room</a>
-      <div class="microhint" style="text-align:center; margin-top:8px;">
-        You can always come back and add more photos later
-      </div>
     </div>
   </div>
 {% endblock %}

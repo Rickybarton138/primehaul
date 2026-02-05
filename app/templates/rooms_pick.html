@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="largetitle">Which rooms?</div>
-  <p class="subtitle">Just tap the rooms you're moving. We'll scan them for you.</p>
+  <div class="largetitle">Select rooms</div>
+  <p class="subtitle">Tap rooms to scan them</p>
 
   <div class="group">
     <div class="chipgrid">
@@ -31,9 +31,6 @@
       {% endfor %}
     </div>
 
-    <div class="hint" style="margin-top:10px;">
-      💡 Add multiple rooms — just tap another room when you're ready.
-    </div>
   </div>
 
   {% if rooms and rooms|length > 0 %}
@@ -44,23 +41,6 @@
       </div>
 
       <div class="invlist">
-        {% set room_icons = {
-          "Living room": "🛋️",
-          "Bed 1": "🛏️",
-          "Bed 2": "🛏️",
-          "Bed 3": "🛏️",
-          "Bed 4": "🛏️",
-          "Bed 5": "🛏️",
-          "Kitchen": "🍳",
-          "Bathroom": "🚿",
-          "Dining room": "🍽️",
-          "Hallway": "🚪",
-          "Office": "💼",
-          "Garage": "🚗",
-          "Loft": "📦",
-          "Garden": "🌳",
-          "Other": "➕"
-        } %}
         {% for r in rooms %}
           <a class="invlink" href="/s/{{ company_slug }}/{{ token }}/room/{{ r.id }}">
             <div class="invtop">
@@ -69,9 +49,9 @@
             </div>
             <div class="invitems">
               {% if r.items and r.items|length > 0 %}
-                ✅ <strong>{{ r.items|length }} items detected</strong> • Tap to view
+                {{ r.items|length }} items
               {% else %}
-                <span class="muted">📸 Tap to scan items</span>
+                <span class="muted">Tap to scan</span>
               {% endif %}
             </div>
           </a>
@@ -85,13 +65,9 @@
   <div class="footer footer-clean">
     <div class="footer-inner">
       {% if rooms and rooms|length > 0 %}
-        <a class="btn" href="/s/{{ company_slug }}/{{ token }}/quote-preview">💰 See My Quote</a>
-        <div class="microhint" style="text-align:center; margin-top:8px;">
-          Based on {% set total = namespace(items=0) %}{% for r in rooms %}{% set total.items = total.items + (r.items|length if r.items else 0) %}{% endfor %}{{ total.items }} items detected in {{ rooms|length }} room{{ 's' if rooms|length > 1 else '' }}
-        </div>
+        <a class="btn" href="/s/{{ company_slug }}/{{ token }}/quote-preview">See Quote</a>
       {% else %}
-        <button class="btn" style="opacity:.55; pointer-events:none;">Select rooms to continue</button>
-        <div class="microhint" style="text-align:center; margin-top:8px;">Tap the rooms above to get started</div>
+        <button class="btn" style="opacity:.55; pointer-events:none;">Select rooms first</button>
       {% endif %}
     </div>
   </div>

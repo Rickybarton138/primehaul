@@ -2,7 +2,7 @@
 
 {% block content %}
   <div class="largetitle">Get an instant quote</div>
-  <p class="subtitle">Professional moving quote in 3 minutes. Answer a few questions and scan your rooms with your camera.</p>
+  <p class="subtitle">3 minutes. No signup required.</p>
 
   <form id="startForm" method="post" action="/s/{{ company_slug }}/{{ token }}/start-v2">
     <!-- Step 1: Addresses -->
@@ -194,59 +194,12 @@
     setupAddressAutocomplete('pickup-input', 'pickup-suggestions', 'pickup-lat', 'pickup-lng');
     setupAddressAutocomplete('dropoff-input', 'dropoff-suggestions', 'dropoff-lat', 'dropoff-lng');
 
-    // Voice input functionality
-    function setupVoiceInput(btnId, inputId) {
-      const btn = document.getElementById(btnId);
-      const input = document.getElementById(inputId);
-
-      // Check if browser supports speech recognition
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-      if (!SpeechRecognition) {
-        btn.style.display = 'none'; // Hide button if not supported
-        return;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-GB';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-
-      btn.addEventListener('click', () => {
-        btn.classList.add('listening');
-        recognition.start();
-      });
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        input.value = transcript;
-        input.dispatchEvent(new Event('input', { bubbles: true })); // Trigger autocomplete
-        btn.classList.remove('listening');
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        btn.classList.remove('listening');
-        if (event.error === 'no-speech') {
-          alert('No speech detected. Please try again.');
-        } else if (event.error === 'not-allowed') {
-          alert('Microphone access denied. Please enable microphone permissions.');
-        }
-      };
-
-      recognition.onend = () => {
-        btn.classList.remove('listening');
-      };
-    }
-
-    setupVoiceInput('pickup-voice-btn', 'pickup-input');
-    setupVoiceInput('dropoff-voice-btn', 'dropoff-input');
   </script>
 
   <style>
     .form-input {
       width: 100%;
-      padding: 14px 48px 14px 16px; /* Extra padding on right for voice button */
+      padding: 14px 16px;
       font-size: 15px;
       border: 1.5px solid var(--hair);
       border-radius: 12px;
@@ -259,40 +212,6 @@
       outline: none;
       border-color: var(--accent);
       background: var(--accent-light);
-    }
-
-    .voice-btn {
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      border: none;
-      background: var(--accent-light);
-      color: var(--accent);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-    }
-
-    .voice-btn:hover {
-      background: rgba(0,102,204,.2);
-      transform: translateY(-50%) scale(1.05);
-    }
-
-    .voice-btn.listening {
-      background: rgba(255,77,79,.2);
-      color: #ff4d4f;
-      animation: pulse 1s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
-      50% { opacity: 0.7; transform: translateY(-50%) scale(1.1); }
     }
 
     .suggestions-dropdown {
@@ -383,7 +302,6 @@
   <div class="footer footer-clean">
     <div class="footer-inner">
       <button class="btn ready" type="submit" form="startForm">Continue</button>
-      <div class="microhint" style="text-align:center; margin-top:8px;">Takes 2-3 minutes • No signup required</div>
     </div>
   </div>
 {% endblock %}
