@@ -144,8 +144,9 @@ async def resolve_and_check_company(request: Request, call_next):
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
-# Create uploads directory if it doesn't exist
-UPLOAD_DIR = Path("app/static/uploads")
+# Create uploads directory OUTSIDE of static (for security)
+# Photos will be served through an authenticated endpoint
+UPLOAD_DIR = Path("uploads")  # Not in app/static - not publicly accessible
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -1063,6 +1064,67 @@ def superadmin_fix_survey_counts(request: Request, db: Session = Depends(get_db)
     except Exception as e:
         logger.error(f"Survey count fix error: {str(e)}")
         return RedirectResponse(url=f"/superadmin/dashboard?error={str(e)}", status_code=303)
+
+
+# ============================================================================
+# PROTECTED PHOTO ACCESS
+# ============================================================================
+
+@app.get("/photo/{company_id}/{token}/{filename}")
+def serve_protected_photo(
+    request: Request,
+    company_id: str,
+    token: str,
+    filename: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Serve photos through authenticated endpoint.
+    Access allowed if:
+    - User is logged in as company owner (admin view)
+    - Request has valid survey token in referrer/session (customer view)
+    - Job status is NOT in_progress (paywall - only after submission)
+    """
+    from fastapi.responses import FileResponse
+
+    # Validate job exists
+    job = db.query(Job).filter(
+        Job.token == token,
+        Job.company_id == company_id
+    ).first()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    # Check access permissions
+    is_customer_view = f"/s/" in request.headers.get("referer", "") and token in request.headers.get("referer", "")
+    is_admin = request.cookies.get("access_token") is not None
+
+    # For admin access: job must be submitted (not in_progress) - PAYWALL
+    if is_admin and job.status == "in_progress":
+        raise HTTPException(status_code=403, detail="Survey not yet submitted")
+
+    # For customer access: always allowed (they uploaded the photos)
+    # For admin access: only if submitted
+
+    # Construct file path
+    file_path = UPLOAD_DIR / company_id / token / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    # Determine content type
+    ext = filename.lower().split('.')[-1]
+    content_types = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'webp': 'image/webp',
+        'heic': 'image/heic',
+    }
+    content_type = content_types.get(ext, 'application/octet-stream')
+
+    return FileResponse(file_path, media_type=content_type)
 
 
 # ============================================================================
@@ -3336,6 +3398,10 @@ def admin_approve_job(
     ).first()
 
     if job:
+        # 🔒 PAYWALL: Can only approve submitted jobs
+        if job.status == "in_progress":
+            return RedirectResponse(url=f"/{company_slug}/admin/dashboard?error=not_submitted", status_code=303)
+
         job.status = "approved"
         job.approved_at = datetime.utcnow()
         db.commit()
@@ -3384,6 +3450,10 @@ def admin_reject_job(
     ).first()
 
     if job:
+        # 🔒 PAYWALL: Can only reject submitted jobs
+        if job.status == "in_progress":
+            return RedirectResponse(url=f"/{company_slug}/admin/dashboard?error=not_submitted", status_code=303)
+
         job.status = "rejected"
         job.rejected_at = datetime.utcnow()
         job.rejection_reason = reason
@@ -3426,6 +3496,10 @@ def admin_update_price(
     ).first()
 
     if job:
+        # 🔒 PAYWALL: Can only update price on submitted jobs
+        if job.status == "in_progress":
+            return RedirectResponse(url=f"/{company_slug}/admin/dashboard?error=not_submitted", status_code=303)
+
         job.custom_price_low = custom_price_low
         job.custom_price_high = custom_price_high
         db.commit()
@@ -3480,6 +3554,10 @@ def admin_quick_approve(
     ).first()
 
     if job:
+        # 🔒 PAYWALL: Can only approve submitted jobs
+        if job.status == "in_progress":
+            return JSONResponse({"error": "Survey not yet submitted"}, status_code=403)
+
         job.status = "approved"
         job.approved_at = datetime.utcnow()
         db.commit()

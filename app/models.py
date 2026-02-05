@@ -465,8 +465,15 @@ class Photo(Base):
 
     @property
     def url(self):
-        """Return the URL to access this photo"""
-        return f"/static/{self.storage_path}"
+        """Return the URL to access this photo through protected endpoint"""
+        # storage_path format: uploads/{company_id}/{token}/{filename}
+        # Convert to protected URL: /photo/{company_id}/{token}/{filename}
+        parts = self.storage_path.split('/')
+        if len(parts) >= 4:
+            # parts: ['uploads', company_id, token, filename]
+            return f"/photo/{parts[1]}/{parts[2]}/{parts[3]}"
+        # Fallback for old format
+        return f"/photo/{self.storage_path.replace('uploads/', '')}"
 
 
 class AdminNote(Base):
