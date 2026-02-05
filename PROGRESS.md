@@ -79,8 +79,14 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 1. Users correct AI detections (e.g., "Large Couch" → "3-seater sofa")
 2. Corrections stored in `ItemFeedback` table
 3. System analyzes patterns — when 70%+ of corrections match, pattern is learned
-4. Future AI detections are automatically corrected before showing to users
-5. Learning cycle runs after each survey submission + can be triggered manually
+4. **AI Prompt Evolution** — Learned patterns injected into GPT-4 prompt, improving base detections
+5. **Post-Processing** — Results double-checked against learned patterns
+6. **Dimension Learning** — System averages corrected dimensions and applies them
+7. Learning cycle runs after each survey submission + can be triggered manually
+
+**Two-Layer Intelligence:**
+- Layer 1: AI prompt enhanced with learned naming conventions and dimensions
+- Layer 2: Output corrections applied based on confidence thresholds
 
 **New Database Table:**
 - `learned_corrections` — stores learned patterns with confidence scores

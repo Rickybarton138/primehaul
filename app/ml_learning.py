@@ -74,6 +74,32 @@ def run_learning_cycle(db: Session) -> Dict:
             ItemFeedback.corrected_category
         ).all()
 
+        # Also learn dimensions from corrections that have them
+        dimension_feedback = db.query(ItemFeedback).filter(
+            ItemFeedback.corrected_name.isnot(None),
+            ItemFeedback.corrected_dimensions.isnot(None)
+        ).all()
+
+        # Aggregate dimensions by corrected name
+        dimension_averages = {}
+        for fb in dimension_feedback:
+            name = normalize_name(fb.corrected_name)
+            if not name:
+                continue
+            dims = fb.corrected_dimensions or {}
+            if not dims:
+                continue
+
+            if name not in dimension_averages:
+                dimension_averages[name] = {"length": [], "width": [], "height": []}
+
+            if dims.get("length"):
+                dimension_averages[name]["length"].append(float(dims["length"]))
+            if dims.get("width"):
+                dimension_averages[name]["width"].append(float(dims["width"]))
+            if dims.get("height"):
+                dimension_averages[name]["height"].append(float(dims["height"]))
+
         results["patterns_analyzed"] = len(feedback_patterns)
 
         for pattern in feedback_patterns:
@@ -105,6 +131,10 @@ def run_learning_cycle(db: Session) -> Dict:
 
             now = datetime.utcnow()
 
+            # Check if we have learned dimensions for this corrected name
+            corrected_normalized = normalize_name(corrected_name)
+            learned_dims = dimension_averages.get(corrected_normalized, {})
+
             if existing:
                 # Update existing pattern
                 # If new correction is more common, update it
@@ -116,6 +146,14 @@ def run_learning_cycle(db: Session) -> Dict:
                         existing.learned_cbm = Decimal(str(round(float(avg_cbm), 4)))
                     if avg_weight:
                         existing.learned_weight_kg = Decimal(str(round(float(avg_weight), 2)))
+
+                # Apply learned dimensions if available
+                if learned_dims.get("length") and len(learned_dims["length"]) >= 2:
+                    existing.learned_length_cm = Decimal(str(round(sum(learned_dims["length"]) / len(learned_dims["length"]), 1)))
+                if learned_dims.get("width") and len(learned_dims["width"]) >= 2:
+                    existing.learned_width_cm = Decimal(str(round(sum(learned_dims["width"]) / len(learned_dims["width"]), 1)))
+                if learned_dims.get("height") and len(learned_dims["height"]) >= 2:
+                    existing.learned_height_cm = Decimal(str(round(sum(learned_dims["height"]) / len(learned_dims["height"]), 1)))
 
                 existing.times_seen = total_times_seen
                 existing.times_corrected = count
@@ -149,6 +187,14 @@ def run_learning_cycle(db: Session) -> Dict:
                 if avg_weight:
                     learned.learned_weight_kg = Decimal(str(round(float(avg_weight), 2)))
 
+                # Apply learned dimensions if available
+                if learned_dims.get("length") and len(learned_dims["length"]) >= 2:
+                    learned.learned_length_cm = Decimal(str(round(sum(learned_dims["length"]) / len(learned_dims["length"]), 1)))
+                if learned_dims.get("width") and len(learned_dims["width"]) >= 2:
+                    learned.learned_width_cm = Decimal(str(round(sum(learned_dims["width"]) / len(learned_dims["width"]), 1)))
+                if learned_dims.get("height") and len(learned_dims["height"]) >= 2:
+                    learned.learned_height_cm = Decimal(str(round(sum(learned_dims["height"]) / len(learned_dims["height"]), 1)))
+
                 db.add(learned)
                 results["new_patterns_learned"] += 1
 
@@ -156,7 +202,8 @@ def run_learning_cycle(db: Session) -> Dict:
                     "from": ai_name,
                     "to": corrected_name,
                     "confidence": f"{confidence:.0%}",
-                    "auto_apply": confidence >= AUTO_APPLY_CONFIDENCE
+                    "auto_apply": confidence >= AUTO_APPLY_CONFIDENCE,
+                    "has_dimensions": bool(learned_dims)
                 })
 
                 logger.info(f"Learned new pattern: '{ai_name}' → '{corrected_name}' (confidence: {confidence:.0%})")
@@ -215,8 +262,19 @@ def apply_learned_corrections(items: List[Dict], db: Session) -> Tuple[List[Dict
             if learned.corrected_category:
                 item["item_category"] = learned.corrected_category
 
+            # Apply learned dimensions
+            if learned.learned_length_cm:
+                item["length_cm"] = float(learned.learned_length_cm)
+            if learned.learned_width_cm:
+                item["width_cm"] = float(learned.learned_width_cm)
+            if learned.learned_height_cm:
+                item["height_cm"] = float(learned.learned_height_cm)
+
             if learned.learned_cbm:
                 item["cbm"] = float(learned.learned_cbm)
+            elif learned.learned_length_cm and learned.learned_width_cm and learned.learned_height_cm:
+                # Calculate CBM from learned dimensions
+                item["cbm"] = round(float(learned.learned_length_cm) * float(learned.learned_width_cm) * float(learned.learned_height_cm) / 1000000, 4)
 
             if learned.learned_weight_kg:
                 item["weight_kg"] = float(learned.learned_weight_kg)
