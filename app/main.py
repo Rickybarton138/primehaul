@@ -2384,7 +2384,26 @@ def submit_quote_for_approval(
     token: str,
     db: Session = Depends(get_db)
 ):
-    """Submit quote for admin approval and charge survey fee"""
+    """Redirect to contact form to collect customer details before submission"""
+    company = request.state.company
+    job = get_or_create_job(company.id, token, db)
+
+    # If customer already has contact details, skip to actual submission
+    if job.customer_name and job.customer_phone and job.customer_email:
+        return RedirectResponse(url=f"/s/{company_slug}/{token}/do-submit", status_code=303)
+
+    # Otherwise, collect contact details first
+    return RedirectResponse(url=f"/s/{company_slug}/{token}/contact", status_code=303)
+
+
+@app.api_route("/s/{company_slug}/{token}/do-submit", methods=["GET", "POST"])
+def do_submit_quote(
+    request: Request,
+    company_slug: str,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Actually submit the quote for approval (after contact details collected)"""
     company = request.state.company
     job = get_or_create_job(company.id, token, db)
 
@@ -2393,7 +2412,7 @@ def submit_quote_for_approval(
         job.status = "awaiting_approval"
         job.submitted_at = datetime.utcnow()
         db.commit()
-        logger.info(f"Quote {token} submitted for approval. CBM: {job.total_cbm}, Weight: {job.total_weight_kg}kg")
+        logger.info(f"Quote {token} submitted for approval by {job.customer_name}. CBM: {job.total_cbm}, Weight: {job.total_weight_kg}kg")
 
         # Charge survey fee (or use free survey)
         try:
@@ -2414,7 +2433,8 @@ def submit_quote_for_approval(
             event_type='job_submitted',
             metadata={
                 'job_token': token,
-                'description': f"Quote submitted for approval"
+                'customer_name': job.customer_name,
+                'description': f"Quote submitted for approval by {job.customer_name}"
             },
             db=db
         )
@@ -2550,38 +2570,23 @@ def submit_contact_and_quote(
     customer_email: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    """Final submission with contact details"""
+    """Save contact details and submit quote for approval"""
     company = request.state.company
     job = get_or_create_job(company.id, token, db)
 
     if not customer_name or not customer_phone or not customer_email:
         return RedirectResponse(url=f"/s/{company_slug}/{token}/contact?err=required", status_code=303)
 
-    # Save customer details and mark as awaiting approval
+    # Save customer details
     job.customer_name = customer_name.strip()
     job.customer_phone = customer_phone.strip()
     job.customer_email = customer_email.strip()
-    job.status = "awaiting_approval"
-    job.submitted_at = datetime.utcnow()
     db.commit()
 
-    # Track analytics event
-    track_event(
-        company_id=company.id,
-        event_type='job_submitted',
-        metadata={
-            'job_token': token,
-            'customer_name': customer_name,
-            'description': f"Quote submitted by {customer_name}"
-        },
-        db=db
-    )
+    logger.info(f"Contact details saved for {token}: {customer_name} ({customer_email}, {customer_phone})")
 
-    # TODO: Send email/SMS to company admin
-    # TODO: Send confirmation to customer
-    logger.info(f"Quote {token} submitted by {customer_name} ({customer_email}, {customer_phone}). CBM: {job.total_cbm}, Weight: {job.total_weight_kg}kg")
-
-    return RedirectResponse(url=f"/s/{company_slug}/{token}/quote-preview?submitted=1", status_code=303)
+    # Now do the actual submission (status change, survey fee, etc.)
+    return RedirectResponse(url=f"/s/{company_slug}/{token}/do-submit", status_code=307)  # 307 preserves POST
 
 
 # ----------------------------
