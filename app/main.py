@@ -938,13 +938,36 @@ def superadmin_dashboard(request: Request, db: Session = Depends(get_db)):
                 "metadata": str(event.metadata)[:100] if event.metadata else None
             })
 
+        # Recent ML feedback (last 30 corrections/changes)
+        recent_feedback_records = db.query(ItemFeedback).order_by(ItemFeedback.created_at.desc()).limit(30).all()
+        recent_feedback = []
+        for fb in recent_feedback_records:
+            company = db.query(Company).filter(Company.id == fb.company_id).first()
+            time_diff = datetime.utcnow() - fb.created_at.replace(tzinfo=None)
+            if time_diff.days > 0:
+                time_ago = f"{time_diff.days}d ago"
+            elif time_diff.seconds > 3600:
+                time_ago = f"{time_diff.seconds // 3600}h ago"
+            else:
+                time_ago = f"{time_diff.seconds // 60}m ago"
+
+            recent_feedback.append({
+                "feedback_type": fb.feedback_type or "unknown",
+                "ai_detected": fb.ai_detected_name or "—",
+                "corrected_to": fb.corrected_name or "—",
+                "company_name": company.company_name if company else "Unknown",
+                "time_ago": time_ago,
+                "notes": fb.notes[:80] if fb.notes else None
+            })
+
         return templates.TemplateResponse("superadmin_dashboard.html", {
             "request": request,
             "companies": companies,
             "stats": stats,
             "ml_stats": ml_stats,
             "db_stats": db_stats,
-            "recent_activity": recent_activity
+            "recent_activity": recent_activity,
+            "recent_feedback": recent_feedback
         })
 
     except Exception as e:
