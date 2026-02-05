@@ -33,41 +33,19 @@
 
   <script>
     (function(){
+      const form = document.getElementById("propForm");
       const hidden = document.getElementById("property_type");
       const tiles = document.querySelectorAll(".tile[data-value]");
-      const btn = document.getElementById("continueBtn");
-      const hint = document.getElementById("continueHint");
-
-      function updateButton() {
-        if (hidden.value) {
-          btn.disabled = false;
-          btn.classList.add("ready");
-          if (hint) hint.textContent = "Ready to go!";
-        } else {
-          btn.disabled = true;
-          btn.classList.remove("ready");
-          if (hint) hint.textContent = "Select a property type to continue";
-        }
-      }
 
       tiles.forEach(function(t){
         t.addEventListener("click", function(){
           for (let i=0; i<tiles.length; i++) tiles[i].classList.remove("selected");
           t.classList.add("selected");
           hidden.value = t.getAttribute("data-value") || "";
-          updateButton();
+          // Auto-submit after selection
+          form.submit();
         });
       });
-
-      // Prevent submit if no selection
-      btn.addEventListener("click", function(e) {
-        if (!hidden.value) {
-          e.preventDefault();
-          alert('Please select a property type');
-        }
-      });
-
-      updateButton();
     })();
   </script>
 {% endblock %}
@@ -75,11 +53,8 @@
 {% block footer %}
   <div class="footer footer-clean">
     <div class="footer-inner">
-      <button class="btn" id="continueBtn" type="submit" form="propForm">
-        ✓ Continue to Rooms
-      </button>
-      <div class="microhint" style="text-align:center; margin-top:8px;" id="continueHint">
-        Select a property type to continue
+      <div class="microhint" style="text-align:center;">
+        Tap a property type to continue
       </div>
     </div>
   </div>

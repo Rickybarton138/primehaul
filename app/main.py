@@ -2111,8 +2111,34 @@ def calculate_quote(job: Job, db: Session) -> dict:
     if total_weight_kg > pricing.weight_threshold_kg:
         weight_price = (total_weight_kg - pricing.weight_threshold_kg) * float(pricing.price_per_kg_over_threshold)
 
-    # Distance pricing (mock for now)
-    distance_price = 120
+    # Distance pricing - calculated from pickup/dropoff coordinates
+    distance_price = 0
+    distance_miles = 0
+    if job.pickup and job.dropoff:
+        pickup_lat = job.pickup.get('lat')
+        pickup_lng = job.pickup.get('lng')
+        dropoff_lat = job.dropoff.get('lat')
+        dropoff_lng = job.dropoff.get('lng')
+
+        if all([pickup_lat, pickup_lng, dropoff_lat, dropoff_lng]):
+            # Haversine formula for distance in miles
+            import math
+            R = 3959.0  # Earth's radius in miles
+            lat1_rad = math.radians(float(pickup_lat))
+            lat2_rad = math.radians(float(dropoff_lat))
+            dlat = math.radians(float(dropoff_lat) - float(pickup_lat))
+            dlng = math.radians(float(dropoff_lng) - float(pickup_lng))
+            a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlng / 2)**2
+            c = 2 * math.asin(math.sqrt(a))
+            distance_miles = R * c
+
+            # Calculate price: miles over base distance × price per mile
+            base_distance = float(pricing.base_distance_km or 0) * 0.621371  # Convert km to miles
+            price_per_mile = float(pricing.price_per_km or 2.00) * 1.60934  # Convert per-km to per-mile
+            if distance_miles > base_distance:
+                distance_price = (distance_miles - base_distance) * price_per_mile
+            else:
+                distance_price = 0
 
     # === ACCESS DIFFICULTY PRICING ===
     access_price = 0
@@ -2244,40 +2270,8 @@ def calculate_quote(job: Job, db: Session) -> dict:
     final_low = job.custom_price_low or estimate_low
     final_high = job.custom_price_high or estimate_high
 
-    # INSTANT AUTO-APPROVAL Logic
-    # Auto-approve if ALL conditions met:
-    # 1. High confidence (good photos, enough items)
-    # 2. Simple move (under 15 CBM, under 50 items)
-    # 3. Reasonable price range (under £3000)
-    # 4. Not already submitted/approved/rejected
-    auto_approved = False
-    if (confidence == "High" and
-        total_cbm <= 15 and
-        total_items <= 50 and
-        final_high <= 3000 and
-        job.status == "in_progress"):
-        # Auto-approve!
-        job.status = "approved"
-        job.approved_at = datetime.utcnow()
-        db.commit()
-        auto_approved = True
-        logger.info(f"Job {job.id} auto-approved (High confidence, simple move)")
-
-        # Send SMS notification if customer has phone
-        if job.customer_phone and job.customer_name:
-            company = db.query(Company).filter(Company.id == job.company_id).first()
-            booking_url = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'localhost:8000')}/s/{company.slug}/{job.token}/booking"
-            try:
-                notify_quote_approved(
-                    customer_name=job.customer_name,
-                    customer_phone=job.customer_phone,
-                    company_name=company.company_name,
-                    price_low=final_low,
-                    price_high=final_high,
-                    booking_url=booking_url
-                )
-            except Exception as e:
-                logger.error(f"Failed to send auto-approval SMS: {e}")
+    # NOTE: Auto-approval removed - all quotes require manual admin approval
+    # This ensures the admin always reviews before the customer can accept
 
     return {
         "estimate_low": final_low,
@@ -2291,7 +2285,7 @@ def calculate_quote(job: Job, db: Session) -> dict:
         "total_cbm": round(total_cbm, 2),
         "total_weight_kg": round(total_weight_kg, 0),
         "confidence": confidence,
-        "auto_approved": auto_approved,
+        "distance_miles": round(distance_miles, 1),
         "breakdown": {
             "base": base_price,
             "volume": round(cbm_price, 2),
@@ -2335,7 +2329,7 @@ def quote_preview(request: Request, company_slug: str, token: str, db: Session =
         "total_cbm": quote["total_cbm"],
         "total_weight_kg": quote["total_weight_kg"],
         "confidence": quote["confidence"],
-        "auto_approved": quote.get("auto_approved", False),
+        "distance_miles": quote.get("distance_miles", 0),
         "breakdown": quote["breakdown"],
         "packing_breakdown": quote.get("packing_breakdown"),
         "access_breakdown": quote.get("access_breakdown"),
@@ -2384,9 +2378,36 @@ def update_packing_service(
 
 
 @app.post("/s/{company_slug}/{token}/submit-quote")
-def submit_quote_redirect(company_slug: str, token: str):
-    """Redirect to booking calendar"""
-    return RedirectResponse(url=f"/s/{company_slug}/{token}/booking", status_code=303)
+def submit_quote_for_approval(
+    request: Request,
+    company_slug: str,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Submit quote for admin approval"""
+    company = request.state.company
+    job = get_or_create_job(company.id, token, db)
+
+    # Only submit if still in progress
+    if job.status == "in_progress":
+        job.status = "awaiting_approval"
+        job.submitted_at = datetime.utcnow()
+        db.commit()
+        logger.info(f"Quote {token} submitted for approval. CBM: {job.total_cbm}, Weight: {job.total_weight_kg}kg")
+
+        # Track analytics event
+        track_event(
+            company_id=company.id,
+            event_type='job_submitted',
+            metadata={
+                'job_token': token,
+                'description': f"Quote submitted for approval"
+            },
+            db=db
+        )
+
+    # Redirect back to quote preview with submission confirmation
+    return RedirectResponse(url=f"/s/{company_slug}/{token}/quote-preview", status_code=303)
 
 
 # ----------------------------
@@ -3854,6 +3875,8 @@ def update_pricing(
     fragile_item_fee: float = Form(...),
     weight_threshold_kg: int = Form(...),
     price_per_kg_over_threshold: float = Form(...),
+    base_distance_km: int = Form(0),
+    price_per_km: float = Form(2.00),
     pack1_price: float = Form(...),
     pack2_price: float = Form(...),
     pack3_price: float = Form(...),
@@ -3874,7 +3897,7 @@ def update_pricing(
     # Validate inputs
     all_prices = [
         price_per_cbm, callout_fee, bulky_item_fee, fragile_item_fee, price_per_kg_over_threshold,
-        pack1_price, pack2_price, pack3_price, pack6_price, robe_carton_price,
+        price_per_km, pack1_price, pack2_price, pack3_price, pack6_price, robe_carton_price,
         tape_price, paper_price, mattress_cover_price, packing_labor_per_hour
     ]
 
@@ -3913,6 +3936,8 @@ def update_pricing(
     pricing.fragile_item_fee = fragile_item_fee
     pricing.weight_threshold_kg = weight_threshold_kg
     pricing.price_per_kg_over_threshold = price_per_kg_over_threshold
+    pricing.base_distance_km = base_distance_km
+    pricing.price_per_km = price_per_km
     pricing.pack1_price = pack1_price
     pricing.pack2_price = pack2_price
     pricing.pack3_price = pack3_price

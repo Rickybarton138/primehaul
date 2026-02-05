@@ -3,7 +3,7 @@
 **Last Updated:** 4 February 2026
 **Repository:** github.com/jaybo1431/primehaul
 **Branch:** main
-**Latest Commit:** `e089b02`
+**Latest Commit:** `09ad402`
 
 ---
 
@@ -121,9 +121,18 @@ Each variant has pre-set dimensions (length, width, height, weight, CBM). Correc
 
 **Note:** Ensure `RAILWAY_PUBLIC_DOMAIN` is set to `primehaul.co.uk` in Railway env vars.
 
+### Landing Page — Cost Comparison Section
+
+Added a "Do The Maths" section between the stats and pricing sections on the landing page. Side-by-side red vs green cards showing:
+- **Without primehaul**: 3 site visits × £75 = £225 to win one job
+- **With primehaul**: £9.99 per survey, AI instant quote, approve in 30 secs
+
+Bold headline: **"That's a 95% cost reduction on quoting"**. Responsive — stacks on mobile.
+
 ### Commits
 
 ```
+09ad402 Add cost comparison section to landing page — 95% quoting cost reduction
 e089b02 Fix: HTTPS security — remove hardcoded local IPs, secure cookies, trust proxy headers
 8102e2e Feature: Glowing packing CTA, company details settings, furniture variant toggle
 1b4e8cf Update progress log with Feb 3-4 session notes

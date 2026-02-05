@@ -1,18 +1,23 @@
 {% extends "base.html" %}
 
 {% block content %}
-  {% if auto_approved %}
+  {% if job.status == 'approved' %}
     <div class="largetitle">Quote approved</div>
     <p class="subtitle">Your quote is ready to book. Secure your moving date now.</p>
+  {% elif job.status == 'awaiting_approval' %}
+    <div class="largetitle">Quote submitted</div>
+    <p class="subtitle">Our team is reviewing your quote. We'll notify you when it's approved.</p>
   {% else %}
     <div class="largetitle">Your quote</div>
-    <p class="subtitle">AI-powered estimate. Our team will review and confirm within 2 hours.</p>
+    <p class="subtitle">AI-powered estimate. Submit for review when ready.</p>
   {% endif %}
 
   <div class="group">
     <div class="bigprice">£{{ estimate_low }} – £{{ estimate_high }}</div>
-    {% if auto_approved %}
-      <div class="pill" style="background:rgba(255,255,255,.1); color:#ffffff; border-color:rgba(255,255,255,.3);">Approved</div>
+    {% if job.status == 'approved' %}
+      <div class="pill" style="background:rgba(46,229,157,.15); color:#2ee59d; border-color:rgba(46,229,157,.3);">✓ Approved</div>
+    {% elif job.status == 'awaiting_approval' %}
+      <div class="pill" style="background:rgba(255,165,0,.15); color:#ffa500; border-color:rgba(255,165,0,.3);">⏳ Pending Review</div>
     {% else %}
       <div class="pill">{{ confidence }}</div>
     {% endif %}
@@ -50,7 +55,7 @@
     </div>
 
     <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--hair);">
-      <div style="font-weight:700; margin-bottom:12px;">Route details</div>
+      <div style="font-weight:700; margin-bottom:12px;">Route details{% if distance_miles > 0 %} <span style="font-weight:400; color:var(--muted);">({{ "%.0f"|format(distance_miles) }} miles)</span>{% endif %}</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <div class="statrow">
           <div class="staticon">
@@ -236,7 +241,7 @@
 {% block footer %}
   <div class="footer footer-clean">
     <div class="footer-inner">
-      {% if auto_approved or job.status == 'approved' %}
+      {% if job.status == 'approved' %}
         <a href="/s/{{ company_slug }}/{{ token }}/quote/accept" class="btn" style="text-decoration:none; display:block;">
           Accept This Quote
         </a>
@@ -253,7 +258,7 @@
       {% elif job.status == 'awaiting_approval' %}
         <div style="text-align:center;">
           <div class="btn" style="opacity:.7; pointer-events:none; background:rgba(255,165,0,.3); color:#ffa500; border:1px solid rgba(255,165,0,.5);">
-            Awaiting approval
+            ⏳ Awaiting approval
           </div>
           <div class="microhint" style="margin-top:8px;">
             We're reviewing your quote. You'll receive a text when it's ready!
