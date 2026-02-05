@@ -40,7 +40,7 @@
             </p>
 
             <!-- Stripe Connect Status -->
-            <div style="padding: 24px; border-radius: 12px; background: {% if connect_status.connected and connect_status.status == 'active' %}rgba(46,229,157,.1); border: 1px solid rgba(46,229,157,.3){% elif connect_status.connected %}rgba(255,165,0,.1); border: 1px solid rgba(255,165,0,.3){% else %}rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1){% endif %}; margin-bottom: 24px;">
+            <div style="padding: 24px; border-radius: 12px; background: {% if connect_status.connected and connect_status.status == 'active' %}rgba(46,229,157,.1); border: 1px solid rgba(46,229,157,.3){% elif connect_status.connected %}rgba(96,165,250,.1); border: 1px solid rgba(96,165,250,.3){% else %}rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1){% endif %}; margin-bottom: 24px;">
 
                 {% if connect_status.connected and connect_status.status == 'active' %}
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
@@ -63,9 +63,9 @@
 
                 {% elif connect_status.connected and connect_status.status == 'pending' %}
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                        <div style="width: 48px; height: 48px; background: rgba(255,165,0,.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏳</div>
+                        <div style="width: 48px; height: 48px; background: rgba(96,165,250,.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏳</div>
                         <div>
-                            <div style="font-size: 18px; font-weight: 700; color: #ffa500;">Setup Incomplete</div>
+                            <div style="font-size: 18px; font-weight: 700; color: #60a5fa;">Setup Incomplete</div>
                             <div style="font-size: 14px; color: #888;">Please complete your Stripe account setup</div>
                         </div>
                     </div>
@@ -152,8 +152,8 @@
             </div>
 
             {% if not usage.has_payment_method %}
-            <div style="margin-top: 16px; padding: 16px; background: rgba(255,165,0,.1); border: 1px solid rgba(255,165,0,.3); border-radius: 12px;">
-                <div style="font-weight: 600; color: #ffa500; margin-bottom: 8px;">Payment method required</div>
+            <div style="margin-top: 16px; padding: 16px; background: rgba(96,165,250,.1); border: 1px solid rgba(96,165,250,.3); border-radius: 12px;">
+                <div style="font-weight: 600; color: #60a5fa; margin-bottom: 8px;">Payment method required</div>
                 <div style="font-size: 13px; color: #888; margin-bottom: 12px;">Add a payment method to continue using surveys after your free trial.</div>
                 <a href="/{{ company_slug }}/billing" class="btn" style="display: inline-block;">Add Payment Method</a>
             </div>

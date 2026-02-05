@@ -10,8 +10,8 @@
       display:none;
       padding:16px;
       border-radius:12px;
-      background:rgba(255,165,0,.1);
-      border:1px solid rgba(255,165,0,.3);
+      background:rgba(96,165,250,.1);
+      border:1px solid rgba(96,165,250,.3);
       margin-top:12px;
     }
     .price-edit-form.active{
@@ -23,7 +23,7 @@
     }
     .note-item{
       padding:10px;
-      border-left:3px solid rgba(255,165,0,.5);
+      border-left:3px solid rgba(96,165,250,.5);
       background:rgba(255,255,255,.02);
       margin-bottom:8px;
       border-radius:0 8px 8px 0;
@@ -102,8 +102,8 @@
       display:inline-block;
       padding:4px 10px;
       border-radius:6px;
-      background:rgba(255,165,0,.2);
-      color:#ffa500;
+      background:rgba(96,165,250,.2);
+      color:#60a5fa;
       font-size:11px;
       font-weight:700;
       text-transform:uppercase;
@@ -149,8 +149,8 @@
 
       <!-- Status Banner -->
       {% if job.status == 'awaiting_approval' %}
-        <div class="group" style="background:rgba(255,165,0,.15); border-color:rgba(255,165,0,.3);">
-          <div style="color:#ffa500; font-weight:700; text-align:center; font-size:16px;">
+        <div class="group" style="background:rgba(96,165,250,.15); border-color:rgba(96,165,250,.3);">
+          <div style="color:#60a5fa; font-weight:700; text-align:center; font-size:16px;">
             ⏳ Awaiting Your Approval
           </div>
           {% if job.submitted_at %}
@@ -183,7 +183,7 @@
         ✓ T&Cs accepted
       </div>
       {% elif company.tcs_enabled %}
-      <div style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:6px; background:rgba(255,165,0,.1); font-size:12px; color:#ffa500; font-weight:600;">
+      <div style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:6px; background:rgba(96,165,250,.1); font-size:12px; color:#60a5fa; font-weight:600;">
         T&Cs pending
       </div>
       {% endif %}
@@ -389,7 +389,7 @@
                 <div style="color:var(--muted); font-size:12px; margin-bottom:3px;">Restrictions</div>
                 <div style="font-weight:600;">
                   {% for restriction in job.pickup_access.building_restrictions %}
-                  <span style="display:inline-block; padding:3px 8px; background:rgba(255,165,0,.2); border-radius:6px; font-size:11px; margin-right:4px; margin-bottom:4px;">
+                  <span style="display:inline-block; padding:3px 8px; background:rgba(96,165,250,.2); border-radius:6px; font-size:11px; margin-right:4px; margin-bottom:4px;">
                     {{ restriction|replace('_', ' ')|title }}
                   </span>
                   {% endfor %}
@@ -440,7 +440,7 @@
                 <div style="color:var(--muted); font-size:12px; margin-bottom:3px;">Restrictions</div>
                 <div style="font-weight:600;">
                   {% for restriction in job.dropoff_access.building_restrictions %}
-                  <span style="display:inline-block; padding:3px 8px; background:rgba(255,165,0,.2); border-radius:6px; font-size:11px; margin-right:4px; margin-bottom:4px;">
+                  <span style="display:inline-block; padding:3px 8px; background:rgba(96,165,250,.2); border-radius:6px; font-size:11px; margin-right:4px; margin-bottom:4px;">
                     {{ restriction|replace('_', ' ')|title }}
                   </span>
                   {% endfor %}
@@ -515,8 +515,8 @@
           </div>
 
           {% if job.customer_provides_packing %}
-          <div style="margin-top:12px; padding:12px; border-radius:8px; background:rgba(255,165,0,.1); border:1px solid rgba(255,165,0,.3);">
-            <div style="font-size:13px; color:#ffa500; font-weight:600;">
+          <div style="margin-top:12px; padding:12px; border-radius:8px; background:rgba(96,165,250,.1); border:1px solid rgba(96,165,250,.3);">
+            <div style="font-size:13px; color:#60a5fa; font-weight:600;">
               ⚠️ Customer Bringing Own Materials
             </div>
             <div style="font-size:12px; color:var(--muted); margin-top:4px;">
@@ -648,7 +648,7 @@
                             <span class="badge">Bulky</span>
                           {% endif %}
                           {% if item.fragile %}
-                            <span class="badge" style="background:rgba(255,165,0,.15); color:#ffa500;">Fragile</span>
+                            <span class="badge" style="background:rgba(96,165,250,.15); color:#60a5fa;">Fragile</span>
                           {% endif %}
                           <button
                             onclick="openCorrection('{{ item.id }}', '{{ item.name }}', '{{ item.item_category or "" }}', {{ item.length_cm or 0 }}, {{ item.width_cm or 0 }}, {{ item.height_cm or 0 }}, {{ item.weight_kg or 0 }})"

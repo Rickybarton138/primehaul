@@ -52,14 +52,14 @@
       </div>
     {% else %}
       <!-- Placeholder for when Stripe is not configured -->
-      <div style="background:rgba(255,165,0,.1); border:1px solid rgba(255,165,0,.3); border-radius:12px; padding:20px; text-align:center;">
+      <div style="background:rgba(96,165,250,.1); border:1px solid rgba(96,165,250,.3); border-radius:12px; padding:20px; text-align:center;">
         <div style="font-size:24px; margin-bottom:8px;">⚙️</div>
         <div style="font-weight:700; margin-bottom:8px;">Payment Setup In Progress</div>
         <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">
           Our payment system is being configured. We'll contact you shortly to arrange payment.
         </div>
         <form method="post" action="/s/{{ company_slug }}/{{ token }}/confirm-booking-manual">
-          <button class="btn" type="submit" style="background:#ffa500; color:#000;">
+          <button class="btn" type="submit" style="background:#60a5fa; color:#000;">
             ✓ Confirm Booking (Pay Later)
           </button>
         </form>
