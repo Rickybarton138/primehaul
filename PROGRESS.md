@@ -56,6 +56,8 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 - Password-protected control center for platform owner
 - All companies, surveys, revenue at a glance
 - ML training data stats (photos, items, corrections)
+- **Recent ML Feedback** - View actual correction details (AI detected → corrected)
+- **Self-Learning ML** - System learns from corrections and auto-applies patterns
 - Database stats and recent activity feed
 - Server status indicator
 - Make any company a partner
@@ -68,6 +70,46 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 ---
 
 ## Session Log: 5 February 2026
+
+### Self-Learning ML System
+
+**Purpose:** The system now learns from user corrections and automatically improves future AI detections. The more it's used, the smarter it gets.
+
+**How It Works:**
+1. Users correct AI detections (e.g., "Large Couch" → "3-seater sofa")
+2. Corrections stored in `ItemFeedback` table
+3. System analyzes patterns — when 70%+ of corrections match, pattern is learned
+4. Future AI detections are automatically corrected before showing to users
+5. Learning cycle runs after each survey submission + can be triggered manually
+
+**New Database Table:**
+- `learned_corrections` — stores learned patterns with confidence scores
+
+**New Module:**
+- `app/ml_learning.py` — pattern detection, confidence calculation, auto-apply logic
+
+**Integration Points:**
+- Photo upload (3 locations) — applies learned corrections to AI results
+- Survey submission — triggers learning cycle
+- Superadmin dashboard — shows feedback details and link to learning page
+
+**Superadmin Learning Page (`/superadmin/learning`):**
+- View all learned patterns with confidence bars
+- See which patterns are auto-applied vs still learning
+- Manual "Run Learning Cycle" button
+- Explanation of how the system learns
+
+**Files Created:**
+- `app/ml_learning.py` — Self-learning module
+- `app/templates/superadmin_learning.html` — Learning dashboard
+- `alembic/versions/fix007_learned_corrections.py` — Migration
+
+**Files Modified:**
+- `app/models.py` — Added `LearnedCorrection` model
+- `app/main.py` — Integrated learning into AI detection + survey submission
+- `app/templates/superadmin_dashboard.html` — Added feedback display + learning link
+
+---
 
 ### Distance Pricing — Now Calculated from Coordinates
 

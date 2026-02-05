@@ -20,7 +20,7 @@ import aiofiles
 
 from app.ai_vision import extract_removal_inventory
 from app.database import get_db, engine
-from app.models import Base, Company, User, PricingConfig, Job, Room, Item, Photo, AdminNote, UsageAnalytics, UserInteraction, AIItemPrediction, MarketplaceJob, Bid, JobBroadcast, Commission, MarketplaceRoom, MarketplaceItem, MarketplacePhoto, ItemFeedback, FurnitureCatalog, TrainingDataset
+from app.models import Base, Company, User, PricingConfig, Job, Room, Item, Photo, AdminNote, UsageAnalytics, UserInteraction, AIItemPrediction, MarketplaceJob, Bid, JobBroadcast, Commission, MarketplaceRoom, MarketplaceItem, MarketplacePhoto, ItemFeedback, FurnitureCatalog, TrainingDataset, LearnedCorrection
 from app.auth import hash_password, verify_password, create_access_token, validate_password_strength
 from app.dependencies import get_current_user, require_role, verify_company_access, get_optional_current_user
 from app.sms import notify_quote_approved, notify_quote_submitted, notify_booking_confirmed
@@ -28,6 +28,7 @@ from app import billing
 from app import marketplace
 from app import notifications
 from app.variants import get_variants_for_item, get_variant_map_for_js
+from app import ml_learning
 
 load_dotenv()
 
@@ -991,6 +992,38 @@ def make_partner(request: Request, company_slug: str, partner_name: str = Form(.
     return RedirectResponse(url="/superadmin/dashboard", status_code=303)
 
 
+@app.get("/superadmin/learning")
+def superadmin_learning(request: Request, db: Session = Depends(get_db)):
+    """View ML learning stats and learned patterns"""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+
+    try:
+        learning_stats = ml_learning.get_learning_stats(db)
+        return templates.TemplateResponse("superadmin_learning.html", {
+            "request": request,
+            "stats": learning_stats
+        })
+    except Exception as e:
+        logger.error(f"Superadmin learning error: {str(e)}")
+        return HTMLResponse(f"<h1>Learning Error</h1><pre>{str(e)}</pre><p><a href='/superadmin/dashboard'>Back</a></p>", status_code=500)
+
+
+@app.post("/superadmin/run-learning")
+def superadmin_run_learning(request: Request, db: Session = Depends(get_db)):
+    """Manually trigger a learning cycle"""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+
+    try:
+        result = ml_learning.run_learning_cycle(db)
+        logger.info(f"Manual learning cycle completed: {result}")
+        return RedirectResponse(url="/superadmin/learning?success=true", status_code=303)
+    except Exception as e:
+        logger.error(f"Manual learning cycle error: {str(e)}")
+        return RedirectResponse(url=f"/superadmin/learning?error={str(e)}", status_code=303)
+
+
 # ============================================================================
 # CUSTOMER SURVEY ENDPOINTS
 # ============================================================================
@@ -1513,6 +1546,15 @@ async def room_scan_upload(
             logger.info(f"Analyzing {len(saved_paths)} photos with AI vision...")
             inventory = extract_removal_inventory(saved_paths)
 
+            # 🧠 SELF-LEARNING: Apply learned corrections to AI detections
+            if inventory.get("items"):
+                try:
+                    inventory["items"], corrections = ml_learning.apply_learned_corrections(inventory["items"], db)
+                    if corrections:
+                        logger.info(f"Auto-applied {len(corrections)} learned corrections")
+                except Exception as e:
+                    logger.warning(f"Could not apply learned corrections: {e}")
+
             # Store structured items
             if inventory.get("items"):
                 created_items = []
@@ -1678,6 +1720,15 @@ async def room_scan_upload_json(
         try:
             logger.info(f"Analyzing {len(saved_paths)} photos with AI vision...")
             inventory = extract_removal_inventory(saved_paths)
+
+            # 🧠 SELF-LEARNING: Apply learned corrections to AI detections
+            if inventory.get("items"):
+                try:
+                    inventory["items"], corrections = ml_learning.apply_learned_corrections(inventory["items"], db)
+                    if corrections:
+                        logger.info(f"Auto-applied {len(corrections)} learned corrections")
+                except Exception as e:
+                    logger.warning(f"Could not apply learned corrections: {e}")
 
             # Store structured items
             if inventory.get("items"):
@@ -1990,6 +2041,15 @@ async def photos_bulk_upload(
         # Use AI to analyze all photos together
         logger.info(f"Analyzing {len(saved_paths)} photos with AI for bulk upload...")
         inventory = extract_removal_inventory(saved_paths)
+
+        # 🧠 SELF-LEARNING: Apply learned corrections to AI detections
+        if inventory.get("items"):
+            try:
+                inventory["items"], corrections = ml_learning.apply_learned_corrections(inventory["items"], db)
+                if corrections:
+                    logger.info(f"Auto-applied {len(corrections)} learned corrections")
+            except Exception as e:
+                logger.warning(f"Could not apply learned corrections: {e}")
 
         # Get room suggestion from AI (we'll use the summary to guess the room type)
         # For bulk upload, create ONE room called "Whole Property" and put everything in it
@@ -2607,6 +2667,14 @@ def do_submit_quote(
             },
             db=db
         )
+
+        # 🧠 SELF-LEARNING: Run learning cycle to process any feedback
+        try:
+            learning_result = ml_learning.run_learning_cycle(db)
+            if learning_result.get("new_patterns_learned") or learning_result.get("patterns_promoted_to_auto"):
+                logger.info(f"ML Learning: {learning_result.get('new_patterns_learned', 0)} new patterns, {learning_result.get('patterns_promoted_to_auto', 0)} promoted to auto-apply")
+        except Exception as e:
+            logger.warning(f"Learning cycle error (non-blocking): {e}")
 
     # Redirect back to quote preview with submission confirmation
     return RedirectResponse(url=f"/s/{company_slug}/{token}/quote-preview", status_code=303)

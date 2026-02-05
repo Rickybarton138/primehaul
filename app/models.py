@@ -287,6 +287,48 @@ class TrainingDataset(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class LearnedCorrection(Base):
+    """
+    Self-learned corrections from user feedback.
+    When users repeatedly correct AI detections, we learn the pattern and apply it automatically.
+    """
+    __tablename__ = "learned_corrections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # What AI typically detects (normalized lowercase)
+    ai_pattern = Column(String(255), nullable=False, index=True)
+
+    # What it should be corrected to
+    corrected_name = Column(String(255), nullable=False)
+    corrected_category = Column(String(100))
+
+    # Learned dimensions (averaged from corrections)
+    learned_length_cm = Column(DECIMAL(10, 2))
+    learned_width_cm = Column(DECIMAL(10, 2))
+    learned_height_cm = Column(DECIMAL(10, 2))
+    learned_weight_kg = Column(DECIMAL(10, 2))
+    learned_cbm = Column(DECIMAL(10, 4))
+
+    # Confidence based on sample size and consistency
+    times_seen = Column(Integer, default=0)  # How many times AI made this detection
+    times_corrected = Column(Integer, default=0)  # How many times users corrected it
+    confidence = Column(DECIMAL(3, 2), default=0)  # 0.00 to 1.00
+
+    # Auto-apply threshold (only apply if confidence >= this)
+    auto_apply = Column(Boolean, default=False)  # Whether to auto-apply this correction
+
+    # Tracking
+    last_seen_at = Column(DateTime(timezone=True))
+    last_learned_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    # Unique constraint on pattern
+    __table_args__ = (
+        Index('idx_learned_ai_pattern', 'ai_pattern'),
+    )
+
+
 class Job(Base):
     """
     Jobs table - Customer removal quotes

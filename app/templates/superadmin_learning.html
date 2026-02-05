@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ML Learning - PrimeHaul Superadmin</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <style>
+    .superadmin-header{
+      background:linear-gradient(135deg, #1a1a2e, #16213e);
+      padding:20px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+    }
+    .superadmin-title{
+      font-size:24px;
+      font-weight:800;
+      color:#fff;
+    }
+    .superadmin-sub{
+      font-size:13px;
+      color:rgba(255,255,255,.5);
+      margin-top:4px;
+    }
+    .stat-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+      gap:12px;
+      margin-bottom:20px;
+    }
+    .stat-card{
+      padding:16px;
+      border-radius:12px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      text-align:center;
+    }
+    .stat-value{
+      font-size:28px;
+      font-weight:800;
+      color:#2ee59d;
+    }
+    .stat-value.purple{ color:#a78bfa; }
+    .stat-value.pink{ color:#f472b6; }
+    .stat-value.blue{ color:#60a5fa; }
+    .stat-label{
+      font-size:11px;
+      color:rgba(255,255,255,.5);
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      margin-top:4px;
+    }
+    .section-title{
+      font-size:16px;
+      font-weight:700;
+      margin-bottom:12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .pattern-row{
+      display:flex;
+      align-items:center;
+      padding:12px;
+      border-radius:10px;
+      background:rgba(255,255,255,.02);
+      border:1px solid rgba(255,255,255,.06);
+      margin-bottom:8px;
+      gap:12px;
+    }
+    .pattern-row:hover{
+      background:rgba(255,255,255,.05);
+    }
+    .pattern-from{
+      color:rgba(255,255,255,.5);
+      flex:1;
+    }
+    .pattern-arrow{
+      color:#2ee59d;
+      font-weight:bold;
+    }
+    .pattern-to{
+      color:#fff;
+      font-weight:600;
+      flex:1;
+    }
+    .pattern-meta{
+      text-align:right;
+      font-size:12px;
+    }
+    .confidence-bar{
+      height:6px;
+      background:rgba(255,255,255,.1);
+      border-radius:3px;
+      overflow:hidden;
+      width:60px;
+      margin-top:4px;
+    }
+    .confidence-fill{
+      height:100%;
+      background:#2ee59d;
+      border-radius:3px;
+    }
+    .auto-badge{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:4px;
+      background:rgba(46,229,157,.15);
+      color:#2ee59d;
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .learning-badge{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:4px;
+      background:rgba(167,139,250,.15);
+      color:#a78bfa;
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .success-msg{
+      background:rgba(46,229,157,.1);
+      border:1px solid rgba(46,229,157,.3);
+      color:#2ee59d;
+      padding:12px;
+      border-radius:8px;
+      margin-bottom:16px;
+    }
+    .error-msg{
+      background:rgba(255,82,82,.1);
+      border:1px solid rgba(255,82,82,.3);
+      color:#ff5252;
+      padding:12px;
+      border-radius:8px;
+      margin-bottom:16px;
+    }
+    .brain-icon{
+      font-size:20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="superadmin-header">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div class="superadmin-title"><span class="brain-icon">🧠</span> ML Self-Learning</div>
+          <div class="superadmin-sub">Patterns learned from user corrections</div>
+        </div>
+        <a href="/superadmin/dashboard" class="btn secondary" style="margin:0; padding:10px 16px; font-size:13px;">← Back to Dashboard</a>
+      </div>
+    </div>
+
+    <div class="screen">
+      {% if request.query_params.get('success') %}
+      <div class="success-msg">
+        Learning cycle completed successfully! Check the patterns below.
+      </div>
+      {% endif %}
+
+      {% if request.query_params.get('error') %}
+      <div class="error-msg">
+        Learning error: {{ request.query_params.get('error') }}
+      </div>
+      {% endif %}
+
+      <!-- Learning Stats -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.total_patterns }}</div>
+          <div class="stat-label">Patterns Learned</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value purple">{{ stats.auto_apply_patterns }}</div>
+          <div class="stat-label">Auto-Applied</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value pink">{{ stats.high_confidence_patterns }}</div>
+          <div class="stat-label">High Confidence</div>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="group" style="background:rgba(167,139,250,.05); border:1px solid rgba(167,139,250,.2); border-radius:12px; padding:16px; margin-bottom:20px;">
+        <div style="font-weight:600; margin-bottom:8px; color:#a78bfa;">How Self-Learning Works</div>
+        <div style="font-size:13px; color:rgba(255,255,255,.7); line-height:1.6;">
+          1. Users correct AI detections (e.g., "Large Couch" → "3-seater sofa")<br>
+          2. System analyzes patterns in corrections<br>
+          3. When 70%+ of corrections match, pattern is auto-applied<br>
+          4. Future AI detections are automatically corrected<br>
+          <br>
+          <strong style="color:#2ee59d;">The more corrections, the smarter the system gets!</strong>
+        </div>
+      </div>
+
+      <!-- Run Learning Button -->
+      <div class="group">
+        <form method="POST" action="/superadmin/run-learning" style="margin-bottom:16px;">
+          <button type="submit" class="btn primary" style="margin:0;">
+            🔄 Run Learning Cycle Now
+          </button>
+        </form>
+        <div style="font-size:12px; color:rgba(255,255,255,.4);">
+          Learning runs automatically after each survey submission. Use this to trigger manually.
+        </div>
+      </div>
+
+      <!-- Learned Patterns -->
+      <div class="group">
+        <div class="section-title">Learned Patterns ({{ stats.recent_patterns|length }})</div>
+        {% for pattern in stats.recent_patterns %}
+        <div class="pattern-row">
+          <div class="pattern-from">"{{ pattern.from }}"</div>
+          <div class="pattern-arrow">→</div>
+          <div class="pattern-to">"{{ pattern.to }}"</div>
+          <div class="pattern-meta">
+            {% if pattern.auto_apply %}
+            <span class="auto-badge">Auto-Apply</span>
+            {% else %}
+            <span class="learning-badge">Learning</span>
+            {% endif %}
+            <div style="color:rgba(255,255,255,.4); margin-top:4px;">
+              {{ pattern.times_corrected }} corrections
+            </div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" style="width:{{ (pattern.confidence * 100)|int }}%;"></div>
+            </div>
+            <div style="font-size:10px; color:rgba(255,255,255,.3);">
+              {{ (pattern.confidence * 100)|int }}% confidence
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+        {% if not stats.recent_patterns %}
+        <div style="color:rgba(255,255,255,.4); font-size:13px; padding:20px; text-align:center;">
+          No patterns learned yet.<br>
+          <span style="font-size:12px;">Patterns are learned when users correct AI detections in the room scan or job review.</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Explanation -->
+      <div class="group">
+        <div class="section-title">Pattern Status Guide</div>
+        <div style="font-size:13px; line-height:1.8;">
+          <span class="auto-badge">Auto-Apply</span> — Pattern is applied automatically to future AI detections (70%+ confidence)<br>
+          <span class="learning-badge">Learning</span> — Still gathering data, needs more corrections to reach threshold
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:24px; font-size:11px; color:rgba(255,255,255,.3);">
+        PrimeHaul ML Learning · Self-evolving from user feedback
+      </div>
+    </div>
+  </div>
+</body>
+</html>
