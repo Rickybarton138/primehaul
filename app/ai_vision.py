@@ -35,12 +35,16 @@ def _img_to_data_url(path: str) -> str:
     return f"data:{mime};base64,{b64}"
 
 
-def extract_removal_inventory(image_paths: List[str]) -> Dict[str, Any]:
+def extract_removal_inventory(image_paths: List[str], learned_guidance: str = None) -> Dict[str, Any]:
     """
     Extract removal inventory from images using OpenAI Vision API.
 
+    The AI prompt can be enhanced with learned patterns from user corrections,
+    making the system smarter over time.
+
     Args:
         image_paths: List of paths to image files
+        learned_guidance: Optional string of learned naming conventions from user feedback
 
     Returns:
         Dict containing 'items' list and 'summary' string
@@ -64,6 +68,11 @@ def extract_removal_inventory(image_paths: List[str]) -> Dict[str, Any]:
 
     if not valid_paths:
         return {"items": [], "summary": ""}
+
+    # Build learned guidance section if we have patterns
+    learned_section = ""
+    if learned_guidance:
+        learned_section = f"\n\n🧠 LEARNED FROM USER FEEDBACK (apply these naming conventions):\n{learned_guidance}\n"
 
     content = [
         {
@@ -144,7 +153,8 @@ def extract_removal_inventory(image_paths: List[str]) -> Dict[str, Any]:
                 "- Bed (double): 140×200×50cm, ~40kg\n\n"
                 "ACROSS MULTIPLE PHOTOS:\n"
                 "- If an item appears in multiple photos (e.g., same sofa from different angles), count it ONCE only\n"
-                "- Look for the same item in different photos and deduplicate\n\n"
+                "- Look for the same item in different photos and deduplicate\n"
+                f"{learned_section}"
                 "Output JSON only. No markdown, no explanation."
             ),
         }

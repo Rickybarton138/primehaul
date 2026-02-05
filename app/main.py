@@ -1543,10 +1543,19 @@ async def room_scan_upload(
     # Use AI to analyze photos and extract inventory
     if saved_paths:
         try:
-            logger.info(f"Analyzing {len(saved_paths)} photos with AI vision...")
-            inventory = extract_removal_inventory(saved_paths)
+            # 🧠 SELF-LEARNING: Get learned patterns to enhance AI prompt
+            learned_guidance = None
+            try:
+                learned_guidance = ml_learning.get_learned_patterns_for_prompt(db)
+                if learned_guidance:
+                    logger.info("Injecting learned patterns into AI prompt")
+            except Exception as e:
+                logger.warning(f"Could not get learned patterns: {e}")
 
-            # 🧠 SELF-LEARNING: Apply learned corrections to AI detections
+            logger.info(f"Analyzing {len(saved_paths)} photos with AI vision...")
+            inventory = extract_removal_inventory(saved_paths, learned_guidance=learned_guidance)
+
+            # 🧠 SELF-LEARNING: Apply learned corrections to AI detections (backup)
             if inventory.get("items"):
                 try:
                     inventory["items"], corrections = ml_learning.apply_learned_corrections(inventory["items"], db)
@@ -1718,10 +1727,19 @@ async def room_scan_upload_json(
     items_list = []
     if saved_paths:
         try:
-            logger.info(f"Analyzing {len(saved_paths)} photos with AI vision...")
-            inventory = extract_removal_inventory(saved_paths)
+            # 🧠 SELF-LEARNING: Get learned patterns to enhance AI prompt
+            learned_guidance = None
+            try:
+                learned_guidance = ml_learning.get_learned_patterns_for_prompt(db)
+                if learned_guidance:
+                    logger.info("Injecting learned patterns into AI prompt")
+            except Exception as e:
+                logger.warning(f"Could not get learned patterns: {e}")
 
-            # 🧠 SELF-LEARNING: Apply learned corrections to AI detections
+            logger.info(f"Analyzing {len(saved_paths)} photos with AI vision...")
+            inventory = extract_removal_inventory(saved_paths, learned_guidance=learned_guidance)
+
+            # 🧠 SELF-LEARNING: Apply learned corrections to AI detections (backup)
             if inventory.get("items"):
                 try:
                     inventory["items"], corrections = ml_learning.apply_learned_corrections(inventory["items"], db)
@@ -2038,11 +2056,20 @@ async def photos_bulk_upload(
 
             saved_paths.append(file_path)
 
+        # 🧠 SELF-LEARNING: Get learned patterns to enhance AI prompt
+        learned_guidance = None
+        try:
+            learned_guidance = ml_learning.get_learned_patterns_for_prompt(db)
+            if learned_guidance:
+                logger.info("Injecting learned patterns into AI prompt")
+        except Exception as e:
+            logger.warning(f"Could not get learned patterns: {e}")
+
         # Use AI to analyze all photos together
         logger.info(f"Analyzing {len(saved_paths)} photos with AI for bulk upload...")
-        inventory = extract_removal_inventory(saved_paths)
+        inventory = extract_removal_inventory(saved_paths, learned_guidance=learned_guidance)
 
-        # 🧠 SELF-LEARNING: Apply learned corrections to AI detections
+        # 🧠 SELF-LEARNING: Apply learned corrections to AI detections (backup)
         if inventory.get("items"):
             try:
                 inventory["items"], corrections = ml_learning.apply_learned_corrections(inventory["items"], db)

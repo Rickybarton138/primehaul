@@ -227,13 +227,18 @@ def apply_learned_corrections(items: List[Dict], db: Session) -> Tuple[List[Dict
     return items, corrections_applied
 
 
-def get_learned_patterns_for_prompt(db: Session, limit: int = 20) -> str:
+def get_learned_patterns_for_prompt(db: Session, limit: int = 25) -> str:
     """
     Generate a prompt enhancement string based on learned patterns.
     This is injected into the AI vision prompt to improve future detections.
+
+    Includes:
+    - Naming corrections (what to call items)
+    - Learned dimensions (if we've learned better sizes)
+    - High-confidence patterns take priority
     """
     patterns = db.query(LearnedCorrection).filter(
-        LearnedCorrection.confidence >= Decimal('0.5'),
+        LearnedCorrection.confidence >= Decimal('0.4'),
         LearnedCorrection.times_corrected >= 2
     ).order_by(
         LearnedCorrection.confidence.desc()
@@ -242,11 +247,31 @@ def get_learned_patterns_for_prompt(db: Session, limit: int = 20) -> str:
     if not patterns:
         return ""
 
-    lines = ["Based on user feedback, make these naming adjustments:"]
-    for p in patterns:
-        lines.append(f"- If you detect '{p.ai_pattern}', call it '{p.corrected_name}' instead")
+    lines = []
 
-    return "\n".join(lines)
+    # Naming adjustments
+    naming_lines = []
+    for p in patterns:
+        if p.ai_pattern != p.corrected_name.lower():
+            naming_lines.append(f"- '{p.ai_pattern}' → call it '{p.corrected_name}'")
+
+    if naming_lines:
+        lines.append("NAMING CORRECTIONS (users prefer these names):")
+        lines.extend(naming_lines[:15])
+
+    # Learned dimensions
+    dimension_lines = []
+    for p in patterns:
+        if p.learned_length_cm and p.learned_width_cm and p.learned_height_cm:
+            dims = f"{int(p.learned_length_cm)}×{int(p.learned_width_cm)}×{int(p.learned_height_cm)}cm"
+            weight = f", {int(p.learned_weight_kg)}kg" if p.learned_weight_kg else ""
+            dimension_lines.append(f"- {p.corrected_name}: {dims}{weight}")
+
+    if dimension_lines:
+        lines.append("\nLEARNED DIMENSIONS (from user corrections):")
+        lines.extend(dimension_lines[:10])
+
+    return "\n".join(lines) if lines else ""
 
 
 def get_learning_stats(db: Session) -> Dict:
