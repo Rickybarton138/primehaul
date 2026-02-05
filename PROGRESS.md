@@ -3,7 +3,7 @@
 **Last Updated:** 5 February 2026
 **Repository:** github.com/jaybo1431/primehaul
 **Branch:** main
-**Latest Commit:** `88df266`
+**Latest Commit:** `771f43f`
 
 ---
 
@@ -96,9 +96,48 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 - `app/templates/quote_preview.html` — Updated status display logic
 - `app/templates/property_type.html` — Auto-submit on tile tap
 
+### Quote Price Styling
+
+Made the quote price bigger and clearer on the customer quote preview page — solid white text at 40px with subtle green glow instead of faded gradient.
+
+### Stripe Connect + Pay-Per-Survey Billing
+
+**Problem:** Needed a way for:
+1. Customer deposits to go directly to removal companies (not through PrimeHaul)
+2. PrimeHaul to charge £9.99 per completed survey after 3 free trial surveys
+
+**Solution — Stripe Connect for Deposits:**
+- Removal companies connect their Stripe account via Dashboard → Payments
+- Customer deposits transfer directly to company's bank account
+- PrimeHaul never handles deposit money — clean and compliant
+- New admin page at `/{slug}/admin/payments` for Connect onboarding
+
+**Solution — Pay-Per-Survey Billing:**
+- Every company gets 3 free surveys during trial
+- When customer clicks "Submit for review", survey is counted
+- After 3 free surveys, £9.99 charged to company's payment method
+- Usage tracking displayed in Payments settings page
+
+### Database Migration
+
+| Migration | Purpose |
+|-----------|---------|
+| `fix005_stripe_connect_and_usage.py` | Add `stripe_connect_account_id`, `surveys_used`, `free_surveys_remaining` to companies |
+
+### Files Created/Modified
+
+- `app/templates/admin_payments.html` — **New**: Payment settings with Connect onboarding + usage stats
+- `app/billing.py` — Added Stripe Connect functions + survey charging logic
+- `app/main.py` — New endpoints for Connect onboarding, deposit payments, survey charging
+- `app/models.py` — Added Connect + usage tracking fields to Company model
+- `app/templates/admin_dashboard_v2.html` — Added Payments nav link
+- `app/static/app.css` — Quote price styling fix
+
 ### Commits
 
 ```
+771f43f Feature: Stripe Connect for deposits + pay-per-survey billing
+4d1e8eb Style: Make quote price bigger and clearer
 88df266 Fix: Distance pricing, approval flow, and property type UX
 ```
 
