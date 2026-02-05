@@ -876,80 +876,86 @@ def superadmin_dashboard(request: Request, db: Session = Depends(get_db)):
 
     from datetime import datetime, timedelta
 
-    # Get all companies
-    companies = db.query(Company).order_by(Company.created_at.desc()).all()
+    try:
+        # Get all companies
+        companies = db.query(Company).order_by(Company.created_at.desc()).all()
 
-    # Calculate stats
-    total_surveys = db.query(func.sum(Company.surveys_used)).scalar() or 0
-    total_items = db.query(Item).count()
-    total_photos = db.query(Photo).count()
-    ml_corrections = db.query(ItemFeedback).count()
-    surveys_today = db.query(Job).filter(
-        Job.submitted_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)
-    ).count()
+        # Calculate stats
+        total_surveys = db.query(func.sum(Company.surveys_used)).scalar() or 0
+        total_items = db.query(Item).count()
+        total_photos = db.query(Photo).count()
+        ml_corrections = db.query(ItemFeedback).count()
+        surveys_today = db.query(Job).filter(
+            Job.submitted_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)
+        ).count()
 
-    # Revenue estimate (surveys beyond free tier * £9.99)
-    revenue_total = 0
-    for c in companies:
-        if not c.is_partner:
-            paid_surveys = max(0, (c.surveys_used or 0) - 3)
-            revenue_total += paid_surveys * 9.99
+        # Revenue estimate (surveys beyond free tier * £9.99)
+        revenue_total = 0
+        for c in companies:
+            is_partner = getattr(c, 'is_partner', False) or False
+            if not is_partner:
+                paid_surveys = max(0, (c.surveys_used or 0) - 3)
+                revenue_total += paid_surveys * 9.99
 
-    stats = {
-        "total_companies": len(companies),
-        "total_surveys": total_surveys,
-        "total_items": total_items,
-        "ml_corrections": ml_corrections,
-        "surveys_today": surveys_today,
-        "revenue_total": revenue_total
-    }
+        stats = {
+            "total_companies": len(companies),
+            "total_surveys": total_surveys,
+            "total_items": total_items,
+            "ml_corrections": ml_corrections,
+            "surveys_today": surveys_today,
+            "revenue_total": revenue_total
+        }
 
-    # ML training data stats
-    ml_stats = {
-        "total_photos": total_photos,
-        "total_items": total_items,
-        "corrections": db.query(ItemFeedback).filter(ItemFeedback.feedback_type == 'correction').count(),
-        "variant_changes": db.query(ItemFeedback).filter(ItemFeedback.feedback_type == 'variant_change').count()
-    }
+        # ML training data stats
+        ml_stats = {
+            "total_photos": total_photos,
+            "total_items": total_items,
+            "corrections": db.query(ItemFeedback).filter(ItemFeedback.feedback_type == 'correction').count(),
+            "variant_changes": db.query(ItemFeedback).filter(ItemFeedback.feedback_type == 'variant_change').count()
+        }
 
-    # Database stats
-    db_stats = {
-        "jobs": db.query(Job).count(),
-        "rooms": db.query(Room).count(),
-        "photos": total_photos,
-        "items": total_items,
-        "feedback": ml_corrections,
-        "analytics": db.query(UsageAnalytics).count()
-    }
+        # Database stats
+        db_stats = {
+            "jobs": db.query(Job).count(),
+            "rooms": db.query(Room).count(),
+            "photos": total_photos,
+            "items": total_items,
+            "feedback": ml_corrections,
+            "analytics": db.query(UsageAnalytics).count()
+        }
 
-    # Recent activity (last 20 analytics events)
-    recent_events = db.query(UsageAnalytics).order_by(UsageAnalytics.created_at.desc()).limit(20).all()
-    recent_activity = []
-    for event in recent_events:
-        company = db.query(Company).filter(Company.id == event.company_id).first()
-        time_diff = datetime.utcnow() - event.created_at
-        if time_diff.days > 0:
-            time_ago = f"{time_diff.days}d ago"
-        elif time_diff.seconds > 3600:
-            time_ago = f"{time_diff.seconds // 3600}h ago"
-        else:
-            time_ago = f"{time_diff.seconds // 60}m ago"
+        # Recent activity (last 20 analytics events)
+        recent_events = db.query(UsageAnalytics).order_by(UsageAnalytics.created_at.desc()).limit(20).all()
+        recent_activity = []
+        for event in recent_events:
+            company = db.query(Company).filter(Company.id == event.company_id).first()
+            time_diff = datetime.utcnow() - event.created_at
+            if time_diff.days > 0:
+                time_ago = f"{time_diff.days}d ago"
+            elif time_diff.seconds > 3600:
+                time_ago = f"{time_diff.seconds // 3600}h ago"
+            else:
+                time_ago = f"{time_diff.seconds // 60}m ago"
 
-        recent_activity.append({
-            "event_type": event.event_type,
-            "company_name": company.company_name if company else "Unknown",
-            "time_ago": time_ago,
-            "metadata": str(event.metadata)[:100] if event.metadata else None
+            recent_activity.append({
+                "event_type": event.event_type,
+                "company_name": company.company_name if company else "Unknown",
+                "time_ago": time_ago,
+                "metadata": str(event.metadata)[:100] if event.metadata else None
+            })
+
+        return templates.TemplateResponse("superadmin_dashboard.html", {
+            "request": request,
+            "companies": companies,
+            "stats": stats,
+            "ml_stats": ml_stats,
+            "db_stats": db_stats,
+            "recent_activity": recent_activity
         })
 
-    return templates.TemplateResponse("superadmin_dashboard.html", {
-        "request": request,
-        "companies": companies,
-        "stats": stats,
-        "ml_stats": ml_stats,
-        "db_stats": db_stats,
-        "recent_activity": recent_activity
-    })
+    except Exception as e:
+        logger.error(f"Superadmin dashboard error: {str(e)}")
+        return HTMLResponse(f"<h1>Dashboard Error</h1><pre>{str(e)}</pre><p><a href='/superadmin/logout'>Logout</a></p>", status_code=500)
 
 
 @app.post("/superadmin/make-partner/{company_slug}")

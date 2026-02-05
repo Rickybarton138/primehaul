@@ -177,14 +177,15 @@ def charge_survey_fee(company: Company, job_token: str, db: Session) -> dict:
     Partners get unlimited free surveys.
     """
     # Partners never get charged (unlimited surveys)
-    if company.is_partner:
+    if getattr(company, 'is_partner', False):
         company.surveys_used = (company.surveys_used or 0) + 1
         db.commit()
-        logger.info(f"Partner survey (free) by {company.slug} ({company.partner_name})")
+        partner_name = getattr(company, 'partner_name', None)
+        logger.info(f"Partner survey (free) by {company.slug} ({partner_name})")
         return {
             "charged": False,
             "reason": "partner_account",
-            "partner_name": company.partner_name
+            "partner_name": partner_name
         }
 
     # Check if company still has free surveys
