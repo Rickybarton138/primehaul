@@ -925,11 +925,11 @@ def superadmin_dashboard(request: Request, db: Session = Depends(get_db)):
         }
 
         # Recent activity (last 20 analytics events)
-        recent_events = db.query(UsageAnalytics).order_by(UsageAnalytics.created_at.desc()).limit(20).all()
+        recent_events = db.query(UsageAnalytics).order_by(UsageAnalytics.recorded_at.desc()).limit(20).all()
         recent_activity = []
         for event in recent_events:
             company = db.query(Company).filter(Company.id == event.company_id).first()
-            time_diff = datetime.utcnow() - event.created_at
+            time_diff = datetime.utcnow() - event.recorded_at
             if time_diff.days > 0:
                 time_ago = f"{time_diff.days}d ago"
             elif time_diff.seconds > 3600:
