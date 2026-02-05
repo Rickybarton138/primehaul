@@ -17,10 +17,238 @@ load_dotenv()
 
 # Configure Stripe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")  # £99/month price ID
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")  # Legacy subscription price
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+STRIPE_SURVEY_PRICE_PENCE = 999  # £9.99 per survey
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# STRIPE CONNECT - For removal companies to receive deposits directly
+# ============================================================================
+
+def create_connect_account(company: Company, db: Session) -> dict:
+    """
+    Create a Stripe Connect Express account for a removal company.
+    This allows them to receive deposit payments directly.
+    """
+    try:
+        account = stripe.Account.create(
+            type="express",
+            country="GB",
+            email=company.email,
+            capabilities={
+                "card_payments": {"requested": True},
+                "transfers": {"requested": True},
+            },
+            business_type="company",
+            metadata={
+                "company_id": str(company.id),
+                "slug": company.slug
+            }
+        )
+
+        company.stripe_connect_account_id = account.id
+        db.commit()
+
+        logger.info(f"Created Stripe Connect account for {company.slug}: {account.id}")
+        return {"account_id": account.id}
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Error creating Connect account: {str(e)}")
+        raise Exception(f"Failed to create payment account: {str(e)}")
+
+
+def create_connect_onboarding_link(company: Company, return_url: str, refresh_url: str) -> dict:
+    """
+    Create an onboarding link for the company to complete Stripe Connect setup.
+    """
+    if not company.stripe_connect_account_id:
+        raise Exception("No Stripe Connect account found")
+
+    try:
+        link = stripe.AccountLink.create(
+            account=company.stripe_connect_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+        )
+
+        logger.info(f"Created Connect onboarding link for {company.slug}")
+        return {"url": link.url}
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Error creating onboarding link: {str(e)}")
+        raise Exception(f"Failed to create onboarding link: {str(e)}")
+
+
+def check_connect_account_status(company: Company, db: Session) -> dict:
+    """
+    Check if a company's Stripe Connect account is fully set up.
+    """
+    if not company.stripe_connect_account_id:
+        return {"connected": False, "status": "not_started"}
+
+    try:
+        account = stripe.Account.retrieve(company.stripe_connect_account_id)
+
+        # Check if onboarding is complete
+        charges_enabled = account.charges_enabled
+        payouts_enabled = account.payouts_enabled
+
+        if charges_enabled and payouts_enabled:
+            if not company.stripe_connect_onboarding_complete:
+                company.stripe_connect_onboarding_complete = True
+                db.commit()
+            return {
+                "connected": True,
+                "status": "active",
+                "charges_enabled": True,
+                "payouts_enabled": True
+            }
+        else:
+            return {
+                "connected": True,
+                "status": "pending",
+                "charges_enabled": charges_enabled,
+                "payouts_enabled": payouts_enabled,
+                "requirements": account.requirements.currently_due if account.requirements else []
+            }
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Error checking Connect account: {str(e)}")
+        return {"connected": False, "status": "error", "error": str(e)}
+
+
+def create_deposit_payment_intent(
+    company: Company,
+    amount_pence: int,
+    job_token: str,
+    customer_email: str,
+    customer_name: str
+) -> dict:
+    """
+    Create a payment intent for a deposit that goes directly to the removal company.
+    Uses Stripe Connect to send funds directly to their account.
+    """
+    if not company.stripe_connect_account_id:
+        raise Exception("Company has not connected their Stripe account")
+
+    if not company.stripe_connect_onboarding_complete:
+        raise Exception("Company has not completed Stripe setup")
+
+    try:
+        # Create payment intent with direct transfer to company
+        intent = stripe.PaymentIntent.create(
+            amount=amount_pence,
+            currency="gbp",
+            transfer_data={
+                "destination": company.stripe_connect_account_id,
+            },
+            metadata={
+                "job_token": job_token,
+                "company_id": str(company.id),
+                "type": "deposit"
+            },
+            receipt_email=customer_email,
+            description=f"Moving deposit - {company.company_name}",
+        )
+
+        logger.info(f"Created deposit payment intent for job {job_token}: {intent.id}")
+        return {
+            "client_secret": intent.client_secret,
+            "payment_intent_id": intent.id
+        }
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Error creating deposit payment: {str(e)}")
+        raise Exception(f"Failed to create payment: {str(e)}")
+
+
+# ============================================================================
+# PAY-PER-SURVEY BILLING - PrimeHaul charges removal companies £9.99/survey
+# ============================================================================
+
+def charge_survey_fee(company: Company, job_token: str, db: Session) -> dict:
+    """
+    Charge a company £9.99 for a completed survey.
+    Returns success if charged, or if still in free trial.
+    """
+    # Check if company still has free surveys
+    if company.free_surveys_remaining and company.free_surveys_remaining > 0:
+        company.free_surveys_remaining -= 1
+        company.surveys_used = (company.surveys_used or 0) + 1
+        db.commit()
+        logger.info(f"Free survey used by {company.slug}. {company.free_surveys_remaining} remaining.")
+        return {
+            "charged": False,
+            "reason": "free_survey",
+            "free_remaining": company.free_surveys_remaining
+        }
+
+    # Need to charge - ensure they have a payment method
+    if not company.stripe_customer_id:
+        logger.error(f"No Stripe customer for {company.slug}")
+        return {
+            "charged": False,
+            "reason": "no_payment_method",
+            "error": "Please add a payment method to continue"
+        }
+
+    try:
+        # Create a one-time charge for the survey
+        charge = stripe.PaymentIntent.create(
+            amount=STRIPE_SURVEY_PRICE_PENCE,
+            currency="gbp",
+            customer=company.stripe_customer_id,
+            off_session=True,
+            confirm=True,
+            metadata={
+                "company_id": str(company.id),
+                "job_token": job_token,
+                "type": "survey_fee"
+            },
+            description=f"PrimeHaul survey fee - {job_token[:8]}"
+        )
+
+        company.surveys_used = (company.surveys_used or 0) + 1
+        db.commit()
+
+        logger.info(f"Charged {company.slug} £9.99 for survey {job_token[:8]}")
+        return {
+            "charged": True,
+            "amount": STRIPE_SURVEY_PRICE_PENCE / 100,
+            "payment_intent_id": charge.id
+        }
+
+    except stripe.error.CardError as e:
+        logger.error(f"Card error charging {company.slug}: {str(e)}")
+        return {
+            "charged": False,
+            "reason": "card_error",
+            "error": str(e.user_message)
+        }
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error charging {company.slug}: {str(e)}")
+        return {
+            "charged": False,
+            "reason": "stripe_error",
+            "error": str(e)
+        }
+
+
+def get_company_usage(company: Company) -> dict:
+    """
+    Get usage statistics for a company's billing dashboard.
+    """
+    return {
+        "surveys_used": company.surveys_used or 0,
+        "free_surveys_remaining": company.free_surveys_remaining or 0,
+        "total_charged": ((company.surveys_used or 0) - (3 - (company.free_surveys_remaining or 0))) * 9.99 if (company.surveys_used or 0) > 3 else 0,
+        "price_per_survey": 9.99,
+        "has_payment_method": bool(company.stripe_customer_id)
+    }
 
 
 def create_checkout_session(

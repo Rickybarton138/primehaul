@@ -29,13 +29,19 @@ class Company(Base):
     email = Column(String(255), nullable=False, unique=True)
     phone = Column(String(50))
 
-    # Subscription
+    # Subscription & Billing
     subscription_status = Column(String(50), nullable=False, default='trial', index=True)  # trial, active, past_due, canceled
     stripe_customer_id = Column(String(255), unique=True, index=True)
     stripe_subscription_id = Column(String(255))
+    stripe_connect_account_id = Column(String(255), unique=True, index=True)  # For receiving deposits via Stripe Connect
+    stripe_connect_onboarding_complete = Column(Boolean, default=False)
     trial_ends_at = Column(DateTime(timezone=True))
     subscription_started_at = Column(DateTime(timezone=True))
     subscription_canceled_at = Column(DateTime(timezone=True))
+
+    # Usage tracking for pay-per-survey
+    surveys_used = Column(Integer, default=0)  # Total surveys submitted
+    free_surveys_remaining = Column(Integer, default=3)  # Free trial surveys
 
     # Branding
     logo_url = Column(Text)

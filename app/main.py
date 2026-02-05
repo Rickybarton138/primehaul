@@ -2384,7 +2384,7 @@ def submit_quote_for_approval(
     token: str,
     db: Session = Depends(get_db)
 ):
-    """Submit quote for admin approval"""
+    """Submit quote for admin approval and charge survey fee"""
     company = request.state.company
     job = get_or_create_job(company.id, token, db)
 
@@ -2394,6 +2394,19 @@ def submit_quote_for_approval(
         job.submitted_at = datetime.utcnow()
         db.commit()
         logger.info(f"Quote {token} submitted for approval. CBM: {job.total_cbm}, Weight: {job.total_weight_kg}kg")
+
+        # Charge survey fee (or use free survey)
+        try:
+            charge_result = billing.charge_survey_fee(company, token, db)
+            if charge_result.get("charged"):
+                logger.info(f"Charged £9.99 survey fee for {company.slug}")
+            elif charge_result.get("reason") == "free_survey":
+                logger.info(f"Used free survey for {company.slug}. {charge_result.get('free_remaining')} remaining.")
+            elif charge_result.get("reason") == "no_payment_method":
+                logger.warning(f"No payment method for {company.slug} - survey submitted but not charged")
+        except Exception as e:
+            logger.error(f"Error charging survey fee: {str(e)}")
+            # Don't block the submission - just log the error
 
         # Track analytics event
         track_event(
@@ -2807,8 +2820,12 @@ def deposit_payment_page(
     # Check if Stripe is configured
     stripe_configured = bool(os.getenv("STRIPE_SECRET_KEY"))
 
+    # Check if company has Stripe Connect set up for receiving deposits
+    connect_ready = company.stripe_connect_onboarding_complete
+
     return templates.TemplateResponse("deposit_payment.html", {
         "request": request,
+        "company": company,
         "company_slug": company_slug,
         "token": token,
         "job": job,
@@ -2818,7 +2835,8 @@ def deposit_payment_page(
         "total_cbm": quote["total_cbm"],
         "deposit_amount": deposit_amount,
         "balance_due": balance_due,
-        "stripe_configured": stripe_configured
+        "stripe_configured": stripe_configured,
+        "connect_ready": connect_ready
     })
 
 
@@ -3459,6 +3477,109 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Webhook error: {str(e)}")
         return JSONResponse({"error": str(e)}, status_code=400)
+
+
+# ============================================================================
+# STRIPE CONNECT - For removal companies to receive deposits directly
+# ============================================================================
+
+@app.get("/{company_slug}/admin/payments", response_class=HTMLResponse)
+def payments_settings(
+    request: Request,
+    company_slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Payment settings page - Stripe Connect onboarding"""
+    company = verify_company_access(company_slug, current_user)
+
+    # Check Connect account status
+    connect_status = billing.check_connect_account_status(company, db)
+
+    # Get usage stats
+    usage = billing.get_company_usage(company)
+
+    return templates.TemplateResponse("admin_payments.html", {
+        "request": request,
+        "company": company,
+        "company_slug": company_slug,
+        "title": "Payment Settings",
+        "connect_status": connect_status,
+        "usage": usage
+    })
+
+
+@app.post("/{company_slug}/admin/payments/connect")
+def start_stripe_connect(
+    company_slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Start Stripe Connect onboarding for receiving deposits"""
+    company = verify_company_access(company_slug, current_user)
+
+    app_url = os.getenv("APP_URL", "https://primehaul.co.uk")
+
+    try:
+        # Create Connect account if needed
+        if not company.stripe_connect_account_id:
+            billing.create_connect_account(company, db)
+
+        # Create onboarding link
+        link = billing.create_connect_onboarding_link(
+            company=company,
+            return_url=f"{app_url}/{company_slug}/admin/payments?connected=true",
+            refresh_url=f"{app_url}/{company_slug}/admin/payments?refresh=true"
+        )
+
+        return RedirectResponse(url=link["url"], status_code=303)
+
+    except Exception as e:
+        logger.error(f"Error starting Connect onboarding: {str(e)}")
+        return RedirectResponse(
+            url=f"/{company_slug}/admin/payments?error=connect_failed",
+            status_code=303
+        )
+
+
+@app.post("/s/{company_slug}/{token}/create-deposit-payment")
+def create_deposit_payment(
+    request: Request,
+    company_slug: str,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Create a deposit payment intent (Stripe Connect - direct to company)"""
+    company = request.state.company
+    job = get_or_create_job(company.id, token, db)
+
+    if job.status != 'approved':
+        return JSONResponse({"error": "Quote not approved"}, status_code=400)
+
+    if not company.stripe_connect_onboarding_complete:
+        return JSONResponse({"error": "Company has not set up payments"}, status_code=400)
+
+    # Calculate deposit
+    quote = calculate_quote(job, db)
+    deposit_amount_pence = int(quote["estimate_low"] * 0.20 * 100)
+
+    try:
+        payment = billing.create_deposit_payment_intent(
+            company=company,
+            amount_pence=deposit_amount_pence,
+            job_token=token,
+            customer_email=job.customer_email or "",
+            customer_name=job.customer_name or ""
+        )
+
+        return JSONResponse({
+            "client_secret": payment["client_secret"],
+            "amount": deposit_amount_pence / 100
+        })
+
+    except Exception as e:
+        logger.error(f"Error creating deposit payment: {str(e)}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 # ============================================================================

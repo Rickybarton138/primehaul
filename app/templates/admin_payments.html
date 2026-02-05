@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Settings - PrimeHaul OS</title>
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ company.company_name }}</h1>
+            <p class="subtitle">Payment Settings</p>
+        </div>
+
+        <div class="card fade-in">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2>Receive Customer Deposits</h2>
+                <a href="/{{ company_slug }}/admin/dashboard" class="btn" style="background: #555; color: #fff;">
+                    Back to Dashboard
+                </a>
+            </div>
+
+            {% if request.query_params.get('connected') %}
+            <div class="alert" style="background: rgba(46, 229, 157, 0.1); border-left: 4px solid #2ee59d; margin-bottom: 24px;">
+                <p style="margin: 0; color: #2ee59d;">
+                    ✓ Stripe account connected successfully! You can now receive deposits directly.
+                </p>
+            </div>
+            {% endif %}
+
+            {% if request.query_params.get('error') %}
+            <div class="alert" style="background: rgba(255, 80, 80, 0.1); border-left: 4px solid #ff5050; margin-bottom: 24px;">
+                <p style="margin: 0; color: #ff5050;">Failed to connect Stripe account. Please try again.</p>
+            </div>
+            {% endif %}
+
+            <p style="color: #888; margin-bottom: 24px;">
+                Connect your Stripe account to receive customer deposits directly into your bank account. PrimeHaul never touches the money — it goes straight to you.
+            </p>
+
+            <!-- Stripe Connect Status -->
+            <div style="padding: 24px; border-radius: 12px; background: {% if connect_status.connected and connect_status.status == 'active' %}rgba(46,229,157,.1); border: 1px solid rgba(46,229,157,.3){% elif connect_status.connected %}rgba(255,165,0,.1); border: 1px solid rgba(255,165,0,.3){% else %}rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1){% endif %}; margin-bottom: 24px;">
+
+                {% if connect_status.connected and connect_status.status == 'active' %}
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="width: 48px; height: 48px; background: rgba(46,229,157,.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✓</div>
+                        <div>
+                            <div style="font-size: 18px; font-weight: 700; color: #2ee59d;">Connected</div>
+                            <div style="font-size: 14px; color: #888;">Your Stripe account is ready to receive deposits</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                        <div style="padding: 12px; background: rgba(255,255,255,.05); border-radius: 8px;">
+                            <div style="font-size: 12px; color: #888; margin-bottom: 4px;">Card Payments</div>
+                            <div style="font-weight: 600; color: #2ee59d;">Enabled</div>
+                        </div>
+                        <div style="padding: 12px; background: rgba(255,255,255,.05); border-radius: 8px;">
+                            <div style="font-size: 12px; color: #888; margin-bottom: 4px;">Payouts</div>
+                            <div style="font-weight: 600; color: #2ee59d;">Enabled</div>
+                        </div>
+                    </div>
+
+                {% elif connect_status.connected and connect_status.status == 'pending' %}
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="width: 48px; height: 48px; background: rgba(255,165,0,.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏳</div>
+                        <div>
+                            <div style="font-size: 18px; font-weight: 700; color: #ffa500;">Setup Incomplete</div>
+                            <div style="font-size: 14px; color: #888;">Please complete your Stripe account setup</div>
+                        </div>
+                    </div>
+                    <form method="post" action="/{{ company_slug }}/admin/payments/connect" style="margin-top: 16px;">
+                        <button type="submit" class="btn" style="width: 100%;">Complete Setup</button>
+                    </form>
+
+                {% else %}
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="width: 48px; height: 48px; background: rgba(255,255,255,.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">💳</div>
+                        <div>
+                            <div style="font-size: 18px; font-weight: 700;">Not Connected</div>
+                            <div style="font-size: 14px; color: #888;">Connect Stripe to receive customer deposits</div>
+                        </div>
+                    </div>
+                    <form method="post" action="/{{ company_slug }}/admin/payments/connect" style="margin-top: 16px;">
+                        <button type="submit" class="btn" style="width: 100%;">Connect Stripe Account</button>
+                    </form>
+                    <p style="font-size: 12px; color: #666; margin-top: 12px; text-align: center;">
+                        You'll be redirected to Stripe to securely connect your account
+                    </p>
+                {% endif %}
+            </div>
+
+            <!-- How it works -->
+            <div style="margin-top: 32px;">
+                <h3 style="margin-bottom: 16px;">How Deposits Work</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="width: 28px; height: 28px; background: rgba(46,229,157,.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #2ee59d; flex-shrink: 0;">1</div>
+                        <div>
+                            <div style="font-weight: 600;">Customer accepts quote</div>
+                            <div style="font-size: 13px; color: #888;">After you approve their survey, they can accept the quote</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="width: 28px; height: 28px; background: rgba(46,229,157,.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #2ee59d; flex-shrink: 0;">2</div>
+                        <div>
+                            <div style="font-weight: 600;">Customer pays 20% deposit</div>
+                            <div style="font-size: 13px; color: #888;">They pay by card to confirm their booking</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="width: 28px; height: 28px; background: rgba(46,229,157,.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #2ee59d; flex-shrink: 0;">3</div>
+                        <div>
+                            <div style="font-weight: 600;">Money goes directly to you</div>
+                            <div style="font-size: 13px; color: #888;">Deposits land in your bank account via Stripe (minus Stripe fees)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Survey Usage -->
+        <div class="card fade-in" style="margin-top: 24px;">
+            <h2 style="margin-bottom: 16px;">Survey Usage</h2>
+            <p style="color: #888; margin-bottom: 24px;">
+                Track your survey usage. You get 3 free surveys, then it's £9.99 per survey.
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+                <div style="padding: 16px; background: rgba(255,255,255,.05); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 28px; font-weight: 800; color: #fff;">{{ usage.surveys_used }}</div>
+                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Surveys Used</div>
+                </div>
+                <div style="padding: 16px; background: rgba(46,229,157,.1); border-radius: 12px; text-align: center; border: 1px solid rgba(46,229,157,.2);">
+                    <div style="font-size: 28px; font-weight: 800; color: #2ee59d;">{{ usage.free_surveys_remaining }}</div>
+                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Free Remaining</div>
+                </div>
+                <div style="padding: 16px; background: rgba(255,255,255,.05); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 28px; font-weight: 800; color: #fff;">£{{ "%.2f"|format(usage.total_charged) }}</div>
+                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Total Billed</div>
+                </div>
+            </div>
+
+            <div style="padding: 16px; background: rgba(255,255,255,.05); border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600;">Price per Survey</div>
+                        <div style="font-size: 13px; color: #888;">Charged when customer submits for review</div>
+                    </div>
+                    <div style="font-size: 20px; font-weight: 700;">£9.99</div>
+                </div>
+            </div>
+
+            {% if not usage.has_payment_method %}
+            <div style="margin-top: 16px; padding: 16px; background: rgba(255,165,0,.1); border: 1px solid rgba(255,165,0,.3); border-radius: 12px;">
+                <div style="font-weight: 600; color: #ffa500; margin-bottom: 8px;">Payment method required</div>
+                <div style="font-size: 13px; color: #888; margin-bottom: 12px;">Add a payment method to continue using surveys after your free trial.</div>
+                <a href="/{{ company_slug }}/billing" class="btn" style="display: inline-block;">Add Payment Method</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="text-align: center; margin-top: 32px; color: #666; font-size: 13px;">
+            <p>&copy; 2026 PrimeHaul OS. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
