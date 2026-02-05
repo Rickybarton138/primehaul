@@ -59,6 +59,10 @@ class Company(Base):
     is_active = Column(Boolean, default=True)
     onboarding_completed = Column(Boolean, default=False)
 
+    # Partner accounts (unlimited free surveys, no billing)
+    is_partner = Column(Boolean, default=False)
+    partner_name = Column(String(100))  # e.g., "Ricky - Infrastructure Partner"
+
     # Relationships
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
     pricing_config = relationship("PricingConfig", back_populates="company", uselist=False, cascade="all, delete-orphan")

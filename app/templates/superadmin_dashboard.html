@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PrimeHaul Superadmin</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <style>
+    .superadmin-header{
+      background:linear-gradient(135deg, #1a1a2e, #16213e);
+      padding:20px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+    }
+    .superadmin-title{
+      font-size:24px;
+      font-weight:800;
+      color:#fff;
+    }
+    .superadmin-sub{
+      font-size:13px;
+      color:rgba(255,255,255,.5);
+      margin-top:4px;
+    }
+    .stat-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+      gap:12px;
+      margin-bottom:20px;
+    }
+    .stat-card{
+      padding:16px;
+      border-radius:12px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      text-align:center;
+    }
+    .stat-value{
+      font-size:28px;
+      font-weight:800;
+      color:#2ee59d;
+    }
+    .stat-value.blue{ color:#60a5fa; }
+    .stat-value.purple{ color:#a78bfa; }
+    .stat-value.pink{ color:#f472b6; }
+    .stat-label{
+      font-size:11px;
+      color:rgba(255,255,255,.5);
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      margin-top:4px;
+    }
+    .section-title{
+      font-size:16px;
+      font-weight:700;
+      margin-bottom:12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .company-row{
+      display:flex;
+      align-items:center;
+      padding:12px;
+      border-radius:10px;
+      background:rgba(255,255,255,.02);
+      border:1px solid rgba(255,255,255,.06);
+      margin-bottom:8px;
+      gap:12px;
+    }
+    .company-row:hover{
+      background:rgba(255,255,255,.05);
+    }
+    .company-name{
+      font-weight:600;
+      flex:1;
+    }
+    .company-meta{
+      font-size:12px;
+      color:rgba(255,255,255,.5);
+    }
+    .partner-badge{
+      padding:3px 8px;
+      border-radius:4px;
+      background:rgba(46,229,157,.15);
+      color:#2ee59d;
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .activity-item{
+      padding:10px 12px;
+      border-left:3px solid rgba(46,229,157,.4);
+      background:rgba(255,255,255,.02);
+      margin-bottom:6px;
+      border-radius:0 8px 8px 0;
+      font-size:13px;
+    }
+    .activity-time{
+      font-size:11px;
+      color:rgba(255,255,255,.4);
+    }
+    .server-status{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 12px;
+      border-radius:6px;
+      background:rgba(46,229,157,.1);
+      color:#2ee59d;
+      font-size:12px;
+      font-weight:600;
+    }
+    .server-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#2ee59d;
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse{
+      0%,100%{ opacity:1; }
+      50%{ opacity:.5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="superadmin-header">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div class="superadmin-title">PrimeHaul Superadmin</div>
+          <div class="superadmin-sub">Eye in the sky</div>
+        </div>
+        <div class="server-status">
+          <div class="server-dot"></div>
+          Server Online
+        </div>
+      </div>
+    </div>
+
+    <div class="screen">
+      <!-- Key Metrics -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.total_companies }}</div>
+          <div class="stat-label">Companies</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value blue">{{ stats.total_surveys }}</div>
+          <div class="stat-label">Surveys</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value purple">{{ stats.total_items }}</div>
+          <div class="stat-label">Items Detected</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value pink">{{ stats.ml_corrections }}</div>
+          <div class="stat-label">ML Corrections</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.surveys_today }}</div>
+          <div class="stat-label">Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value blue">£{{ "%.0f"|format(stats.revenue_total) }}</div>
+          <div class="stat-label">Revenue</div>
+        </div>
+      </div>
+
+      <!-- Companies -->
+      <div class="group">
+        <div class="section-title">Companies ({{ companies|length }})</div>
+        {% for c in companies %}
+        <div class="company-row">
+          <div style="flex:1;">
+            <div class="company-name">
+              {{ c.company_name }}
+              {% if c.is_partner %}<span class="partner-badge">Partner</span>{% endif %}
+            </div>
+            <div class="company-meta">
+              {{ c.slug }} · {{ c.email }} · {{ c.surveys_used or 0 }} surveys
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:600;">{{ c.subscription_status }}</div>
+            <div class="company-meta">
+              {% if c.is_partner %}Unlimited{% else %}{{ c.free_surveys_remaining or 0 }} free left{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="group">
+        <div class="section-title">Recent Activity</div>
+        {% for event in recent_activity %}
+        <div class="activity-item">
+          <div style="display:flex; justify-content:space-between;">
+            <span>{{ event.event_type }} - {{ event.company_name }}</span>
+            <span class="activity-time">{{ event.time_ago }}</span>
+          </div>
+          {% if event.metadata %}
+          <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">
+            {{ event.metadata }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% if not recent_activity %}
+        <div style="color:rgba(255,255,255,.4); font-size:13px;">No recent activity</div>
+        {% endif %}
+      </div>
+
+      <!-- ML Training Data -->
+      <div class="group">
+        <div class="section-title">ML Training Data</div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-value">{{ ml_stats.total_photos }}</div>
+            <div class="stat-label">Photos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value blue">{{ ml_stats.total_items }}</div>
+            <div class="stat-label">Items</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value purple">{{ ml_stats.corrections }}</div>
+            <div class="stat-label">Corrections</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pink">{{ ml_stats.variant_changes }}</div>
+            <div class="stat-label">Variant Changes</div>
+          </div>
+        </div>
+        <div style="font-size:12px; color:rgba(255,255,255,.4); margin-top:8px;">
+          Every photo, detection, and correction is stored for ML training.
+        </div>
+      </div>
+
+      <!-- Database Stats -->
+      <div class="group">
+        <div class="section-title">Database</div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; font-size:13px;">
+          <div>Jobs: <strong>{{ db_stats.jobs }}</strong></div>
+          <div>Rooms: <strong>{{ db_stats.rooms }}</strong></div>
+          <div>Photos: <strong>{{ db_stats.photos }}</strong></div>
+          <div>Items: <strong>{{ db_stats.items }}</strong></div>
+          <div>Feedback: <strong>{{ db_stats.feedback }}</strong></div>
+          <div>Analytics: <strong>{{ db_stats.analytics }}</strong></div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="group">
+        <div class="section-title">Quick Actions</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="/superadmin/logout" class="btn secondary" style="margin:0; padding:10px 16px; font-size:13px;">Logout</a>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:24px; font-size:11px; color:rgba(255,255,255,.3);">
+        PrimeHaul Superadmin · Refresh for latest data
+      </div>
+    </div>
+  </div>
+</body>
+</html>

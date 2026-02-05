@@ -174,7 +174,19 @@ def charge_survey_fee(company: Company, job_token: str, db: Session) -> dict:
     """
     Charge a company £9.99 for a completed survey.
     Returns success if charged, or if still in free trial.
+    Partners get unlimited free surveys.
     """
+    # Partners never get charged (unlimited surveys)
+    if company.is_partner:
+        company.surveys_used = (company.surveys_used or 0) + 1
+        db.commit()
+        logger.info(f"Partner survey (free) by {company.slug} ({company.partner_name})")
+        return {
+            "charged": False,
+            "reason": "partner_account",
+            "partner_name": company.partner_name
+        }
+
     # Check if company still has free surveys
     if company.free_surveys_remaining and company.free_surveys_remaining > 0:
         company.free_surveys_remaining -= 1

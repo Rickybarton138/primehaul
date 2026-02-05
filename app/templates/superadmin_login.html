@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Superadmin Login</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <style>
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+    .login-box{
+      width:100%;
+      max-width:360px;
+      padding:32px;
+      border-radius:16px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .login-title{
+      font-size:20px;
+      font-weight:700;
+      text-align:center;
+      margin-bottom:8px;
+    }
+    .login-sub{
+      font-size:13px;
+      color:rgba(255,255,255,.5);
+      text-align:center;
+      margin-bottom:24px;
+    }
+    .login-input{
+      width:100%;
+      padding:14px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.04);
+      color:#fff;
+      font-size:15px;
+      margin-bottom:16px;
+    }
+    .login-input:focus{
+      outline:none;
+      border-color:rgba(46,229,157,.4);
+    }
+    .login-btn{
+      width:100%;
+      padding:14px;
+      border-radius:10px;
+      border:none;
+      background:#2ee59d;
+      color:#000;
+      font-size:15px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .login-btn:hover{
+      background:#25d58d;
+    }
+    .error-msg{
+      padding:12px;
+      border-radius:8px;
+      background:rgba(255,77,79,.15);
+      color:#ff4d4f;
+      font-size:13px;
+      text-align:center;
+      margin-bottom:16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-title">Superadmin</div>
+    <div class="login-sub">PrimeHaul Control Center</div>
+
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/superadmin/login">
+      <input type="password" name="password" class="login-input" placeholder="Password" required autofocus/>
+      <button type="submit" class="login-btn">Access Dashboard</button>
+    </form>
+  </div>
+</body>
+</html>
