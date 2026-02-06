@@ -184,7 +184,7 @@
           <div style="text-align:right;">
             <div style="font-weight:600;">{{ c.subscription_status }}</div>
             <div class="company-meta">
-              {% if c.is_partner %}Unlimited{% else %}{{ c.free_surveys_remaining or 0 }} free left{% endif %}
+              {% if c.is_partner %}Unlimited{% else %}{{ c.credits or 0 }} credits{% endif %}
             </div>
           </div>
         </div>

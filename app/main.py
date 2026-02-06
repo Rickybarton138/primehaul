@@ -1100,12 +1100,11 @@ def serve_protected_photo(
     is_customer_view = f"/s/" in request.headers.get("referer", "") and token in request.headers.get("referer", "")
     is_admin = request.cookies.get("access_token") is not None
 
-    # For admin access: job must be submitted (not in_progress) - PAYWALL
-    if is_admin and job.status == "in_progress":
-        raise HTTPException(status_code=403, detail="Survey not yet submitted")
+    # Credits are prepaid, so admins can view photos anytime
+    # (Credit is deducted when survey is submitted)
 
     # For customer access: always allowed (they uploaded the photos)
-    # For admin access: only if submitted
+    # For admin access: allowed anytime (prepaid credits model)
 
     # Construct file path
     file_path = UPLOAD_DIR / company_id / token / filename
@@ -2773,17 +2772,18 @@ def do_submit_quote(
         db.commit()
         logger.info(f"Quote {token} submitted for approval by {job.customer_name}. CBM: {job.total_cbm}, Weight: {job.total_weight_kg}kg")
 
-        # Charge survey fee (or use free survey)
+        # Use survey credit (prepaid credits system)
         try:
-            charge_result = billing.charge_survey_fee(company, token, db)
-            if charge_result.get("charged"):
-                logger.info(f"Charged £9.99 survey fee for {company.slug}")
-            elif charge_result.get("reason") == "free_survey":
-                logger.info(f"Used free survey for {company.slug}. {charge_result.get('free_remaining')} remaining.")
-            elif charge_result.get("reason") == "no_payment_method":
-                logger.warning(f"No payment method for {company.slug} - survey submitted but not charged")
+            credit_result = billing.use_survey_credit(company, token, db)
+            if credit_result.get("success"):
+                if credit_result.get("reason") == "partner_account":
+                    logger.info(f"Partner survey (unlimited) by {company.slug}")
+                else:
+                    logger.info(f"Credit used by {company.slug}. {credit_result.get('credits_remaining')} credits remaining.")
+            else:
+                logger.warning(f"Survey submitted but no credit available for {company.slug}: {credit_result.get('error')}")
         except Exception as e:
-            logger.error(f"Error charging survey fee: {str(e)}")
+            logger.error(f"Error using survey credit: {str(e)}")
             # Don't block the submission - just log the error
 
         # Track analytics event
@@ -3308,6 +3308,10 @@ def admin_dashboard(
     total_jobs = db.query(Job).filter(Job.company_id == company.id).count()
     show_onboarding = welcome or (total_jobs == 0 and not company.onboarding_completed)
 
+    # Get credit info for dashboard
+    from app.billing import get_company_credits
+    credit_info = get_company_credits(company)
+
     return templates.TemplateResponse("admin_dashboard_v2.html", {
         "request": request,
         "company": company,
@@ -3318,7 +3322,10 @@ def admin_dashboard(
         "approved_jobs": approved_jobs,
         "rejected_jobs": rejected_jobs,
         "welcome": welcome,
-        "show_onboarding": show_onboarding
+        "show_onboarding": show_onboarding,
+        "credits": credit_info["credits"],
+        "is_partner": credit_info["is_partner"],
+        "low_credits": credit_info["low_credits"]
     })
 
 
@@ -4183,6 +4190,83 @@ def update_company_details(
         url=f"/{company_slug}/admin/company-details?success=true",
         status_code=303
     )
+
+
+# ============================================================================
+# PREPAID CREDITS ENDPOINTS - ADMIN
+# ============================================================================
+
+@app.get("/{company_slug}/admin/buy-credits", response_class=HTMLResponse)
+def buy_credits_page(
+    request: Request,
+    company_slug: str,
+    success: Optional[str] = None,
+    error: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Buy survey credits page"""
+    from app.billing import CREDIT_PACKS, get_company_credits
+
+    company = verify_company_access(company_slug, current_user)
+    credit_info = get_company_credits(company)
+
+    return templates.TemplateResponse("admin_buy_credits.html", {
+        "request": request,
+        "title": "Buy Survey Credits — PrimeHaul OS",
+        "company": company,
+        "company_slug": company_slug,
+        "credits": credit_info["credits"],
+        "is_partner": credit_info["is_partner"],
+        "surveys_used": credit_info["surveys_used"],
+        "low_credits": credit_info["low_credits"],
+        "packs": CREDIT_PACKS,
+        "success": success,
+        "error": error
+    })
+
+
+@app.post("/{company_slug}/admin/buy-credits/{pack_id}")
+def purchase_credits(
+    company_slug: str,
+    pack_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create Stripe checkout session for credit purchase"""
+    from app.billing import create_credit_purchase_session, CREDIT_PACKS
+
+    company = verify_company_access(company_slug, current_user)
+
+    if pack_id not in CREDIT_PACKS:
+        return RedirectResponse(
+            url=f"/{company_slug}/admin/buy-credits?error=Invalid credit pack",
+            status_code=303
+        )
+
+    try:
+        base_url = str(request.base_url).rstrip('/')
+        success_url = f"{base_url}/{company_slug}/admin/buy-credits?success=true"
+        cancel_url = f"{base_url}/{company_slug}/admin/buy-credits?error=Payment cancelled"
+
+        result = create_credit_purchase_session(
+            company=company,
+            pack_id=pack_id,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            db=db
+        )
+
+        logger.info(f"Credit purchase initiated by {company.slug}: {pack_id}")
+        return RedirectResponse(url=result["url"], status_code=303)
+
+    except Exception as e:
+        logger.error(f"Error creating credit purchase session: {str(e)}")
+        return RedirectResponse(
+            url=f"/{company_slug}/admin/buy-credits?error=Payment setup failed. Please try again.",
+            status_code=303
+        )
 
 
 # ============================================================================

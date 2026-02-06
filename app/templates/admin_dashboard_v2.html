@@ -109,8 +109,25 @@
         <a href="/{{ company_slug }}/admin/payments" class="chip" style="text-decoration:none;">
           💳 Payments
         </a>
+        <a href="/{{ company_slug }}/admin/buy-credits" class="chip" style="text-decoration:none;{% if low_credits %} background:rgba(255,77,79,.2); border-color:rgba(255,77,79,.3);{% endif %}">
+          🎟️ Credits{% if not is_partner %}: {{ credits }}{% endif %}{% if low_credits %} ⚠️{% endif %}
+        </a>
       </div>
     </div>
+
+    <!-- Credit Balance Banner -->
+    {% if low_credits and not is_partner %}
+    <div style="padding:12px 16px; background:rgba(255,77,79,.1); border-bottom:1px solid rgba(255,77,79,.3);">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div style="font-size:14px; color:#ff6b6b;">
+          <strong>⚠️ Low on credits!</strong> You have {{ credits }} survey credits remaining.
+        </div>
+        <a href="/{{ company_slug }}/admin/buy-credits" class="quick-approve-btn" style="background:#ff6b6b; padding:8px 16px;">
+          Buy More
+        </a>
+      </div>
+    </div>
+    {% endif %}
 
     <div class="screen">
       {% if show_onboarding %}

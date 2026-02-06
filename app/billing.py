@@ -167,100 +167,187 @@ def create_deposit_payment_intent(
 
 
 # ============================================================================
-# PAY-PER-SURVEY BILLING - PrimeHaul charges removal companies £9.99/survey
+# PREPAID CREDITS SYSTEM - Companies buy credits upfront
 # ============================================================================
 
-def charge_survey_fee(company: Company, job_token: str, db: Session) -> dict:
+# Credit pack pricing (in pence)
+CREDIT_PACKS = {
+    "starter": {"credits": 10, "price_pence": 9900, "price_display": "£99", "per_survey": "£9.90"},
+    "growth": {"credits": 25, "price_pence": 22500, "price_display": "£225", "per_survey": "£9.00"},
+    "pro": {"credits": 50, "price_pence": 39900, "price_display": "£399", "per_survey": "£7.98"},
+    "enterprise": {"credits": 100, "price_pence": 69900, "price_display": "£699", "per_survey": "£6.99"},
+}
+
+
+def use_survey_credit(company: Company, job_token: str, db: Session) -> dict:
     """
-    Charge a company £9.99 for a completed survey.
-    Returns success if charged, or if still in free trial.
-    Partners get unlimited free surveys.
+    Use one credit for a survey submission.
+    Partners have unlimited credits.
+    Returns success if credit used, or error if no credits.
     """
-    # Partners never get charged (unlimited surveys)
+    # Partners have unlimited credits
     if getattr(company, 'is_partner', False):
         company.surveys_used = (company.surveys_used or 0) + 1
         db.commit()
         partner_name = getattr(company, 'partner_name', None)
-        logger.info(f"Partner survey (free) by {company.slug} ({partner_name})")
+        logger.info(f"Partner survey (unlimited) by {company.slug} ({partner_name})")
         return {
-            "charged": False,
+            "success": True,
             "reason": "partner_account",
-            "partner_name": partner_name
+            "partner_name": partner_name,
+            "credits_remaining": "unlimited"
         }
 
-    # Check if company still has free surveys
-    if company.free_surveys_remaining and company.free_surveys_remaining > 0:
-        company.free_surveys_remaining -= 1
-        company.surveys_used = (company.surveys_used or 0) + 1
-        db.commit()
-        logger.info(f"Free survey used by {company.slug}. {company.free_surveys_remaining} remaining.")
+    # Check if company has credits
+    credits = getattr(company, 'credits', 0) or 0
+
+    if credits <= 0:
+        logger.warning(f"No credits for {company.slug} - survey blocked")
         return {
-            "charged": False,
-            "reason": "free_survey",
-            "free_remaining": company.free_surveys_remaining
+            "success": False,
+            "reason": "no_credits",
+            "error": "You've run out of survey credits. Please purchase more to continue."
         }
 
-    # Need to charge - ensure they have a payment method
-    if not company.stripe_customer_id:
-        logger.error(f"No Stripe customer for {company.slug}")
-        return {
-            "charged": False,
-            "reason": "no_payment_method",
-            "error": "Please add a payment method to continue"
-        }
+    # Use one credit
+    company.credits = credits - 1
+    company.surveys_used = (company.surveys_used or 0) + 1
+    db.commit()
+
+    logger.info(f"Credit used by {company.slug}. {company.credits} remaining.")
+    return {
+        "success": True,
+        "reason": "credit_used",
+        "credits_remaining": company.credits
+    }
+
+
+def get_company_credits(company: Company) -> dict:
+    """
+    Get credit balance for a company.
+    """
+    is_partner = getattr(company, 'is_partner', False)
+    credits = getattr(company, 'credits', 0) or 0
+
+    return {
+        "credits": credits if not is_partner else "unlimited",
+        "is_partner": is_partner,
+        "surveys_used": company.surveys_used or 0,
+        "low_credits": credits <= 2 and not is_partner,
+        "packs": CREDIT_PACKS
+    }
+
+
+def create_credit_purchase_session(
+    company: Company,
+    pack_id: str,
+    success_url: str,
+    cancel_url: str,
+    db: Session
+) -> dict:
+    """
+    Create a Stripe Checkout session to purchase credits.
+    """
+    if pack_id not in CREDIT_PACKS:
+        raise Exception(f"Invalid pack: {pack_id}")
+
+    pack = CREDIT_PACKS[pack_id]
 
     try:
-        # Create a one-time charge for the survey
-        charge = stripe.PaymentIntent.create(
-            amount=STRIPE_SURVEY_PRICE_PENCE,
-            currency="gbp",
+        # Create or retrieve Stripe customer
+        if not company.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=company.email,
+                name=company.company_name,
+                metadata={
+                    "company_id": str(company.id),
+                    "slug": company.slug
+                }
+            )
+            company.stripe_customer_id = customer.id
+            db.commit()
+
+        # Create checkout session for credit purchase
+        session = stripe.checkout.Session.create(
             customer=company.stripe_customer_id,
-            off_session=True,
-            confirm=True,
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "gbp",
+                    "unit_amount": pack["price_pence"],
+                    "product_data": {
+                        "name": f"PrimeHaul Survey Credits ({pack['credits']} pack)",
+                        "description": f"{pack['credits']} survey credits at {pack['per_survey']} each",
+                    },
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=success_url,
+            cancel_url=cancel_url,
             metadata={
                 "company_id": str(company.id),
-                "job_token": job_token,
-                "type": "survey_fee"
-            },
-            description=f"PrimeHaul survey fee - {job_token[:8]}"
+                "slug": company.slug,
+                "pack_id": pack_id,
+                "credits": pack["credits"],
+                "type": "credit_purchase"
+            }
         )
 
-        company.surveys_used = (company.surveys_used or 0) + 1
-        db.commit()
+        logger.info(f"Created credit purchase session for {company.slug}: {pack_id} ({pack['credits']} credits)")
 
-        logger.info(f"Charged {company.slug} £9.99 for survey {job_token[:8]}")
         return {
-            "charged": True,
-            "amount": STRIPE_SURVEY_PRICE_PENCE / 100,
-            "payment_intent_id": charge.id
+            "url": session.url,
+            "session_id": session.id
         }
 
-    except stripe.error.CardError as e:
-        logger.error(f"Card error charging {company.slug}: {str(e)}")
-        return {
-            "charged": False,
-            "reason": "card_error",
-            "error": str(e.user_message)
-        }
     except stripe.error.StripeError as e:
-        logger.error(f"Stripe error charging {company.slug}: {str(e)}")
-        return {
-            "charged": False,
-            "reason": "stripe_error",
-            "error": str(e)
-        }
+        logger.error(f"Stripe error creating credit purchase session: {str(e)}")
+        raise Exception(f"Failed to create checkout: {str(e)}")
+
+
+def add_credits_to_company(company: Company, credits: int, db: Session) -> dict:
+    """
+    Add credits to a company's balance (called after successful payment).
+    """
+    old_balance = getattr(company, 'credits', 0) or 0
+    company.credits = old_balance + credits
+    db.commit()
+
+    logger.info(f"Added {credits} credits to {company.slug}. New balance: {company.credits}")
+
+    return {
+        "added": credits,
+        "old_balance": old_balance,
+        "new_balance": company.credits
+    }
+
+
+# Legacy function for backwards compatibility
+def charge_survey_fee(company: Company, job_token: str, db: Session) -> dict:
+    """Legacy wrapper - now uses credit system"""
+    result = use_survey_credit(company, job_token, db)
+    # Convert to old format for backwards compatibility
+    return {
+        "charged": False,  # Credits are prepaid, not charged per survey
+        "reason": result.get("reason"),
+        "credits_remaining": result.get("credits_remaining"),
+        "success": result.get("success", False),
+        "error": result.get("error")
+    }
 
 
 def get_company_usage(company: Company) -> dict:
     """
     Get usage statistics for a company's billing dashboard.
     """
+    credits_info = get_company_credits(company)
     return {
-        "surveys_used": company.surveys_used or 0,
-        "free_surveys_remaining": company.free_surveys_remaining or 0,
-        "total_charged": ((company.surveys_used or 0) - (3 - (company.free_surveys_remaining or 0))) * 9.99 if (company.surveys_used or 0) > 3 else 0,
-        "price_per_survey": 9.99,
-        "has_payment_method": bool(company.stripe_customer_id)
+        "credits": credits_info["credits"],
+        "surveys_used": credits_info["surveys_used"],
+        "is_partner": credits_info["is_partner"],
+        "low_credits": credits_info["low_credits"],
+        "packs": CREDIT_PACKS
     }
 
 
@@ -535,6 +622,35 @@ def handle_invoice_payment_failed(event_data: dict, db: Session):
     # TODO: Send email notification about payment failure
 
 
+def handle_checkout_completed(event_data: dict, db: Session):
+    """
+    Handle checkout.session.completed event - for credit purchases
+    """
+    session = event_data["object"]
+    metadata = session.get("metadata", {})
+
+    # Only process credit purchases
+    if metadata.get("type") != "credit_purchase":
+        return
+
+    company_id = metadata.get("company_id")
+    credits_to_add = int(metadata.get("credits", 0))
+    pack_id = metadata.get("pack_id")
+
+    if not company_id or not credits_to_add:
+        logger.error(f"Missing data in credit purchase: {metadata}")
+        return
+
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        logger.error(f"Company not found for credit purchase: {company_id}")
+        return
+
+    # Add credits
+    result = add_credits_to_company(company, credits_to_add, db)
+    logger.info(f"Credit purchase complete for {company.slug}: +{credits_to_add} credits ({pack_id}). Balance: {result['new_balance']}")
+
+
 def process_webhook_event(event: dict, db: Session) -> bool:
     """
     Process Stripe webhook event
@@ -567,6 +683,7 @@ def process_webhook_event(event: dict, db: Session) -> bool:
             "customer.subscription.deleted": handle_subscription_deleted,
             "invoice.paid": handle_invoice_paid,
             "invoice.payment_failed": handle_invoice_payment_failed,
+            "checkout.session.completed": handle_checkout_completed,
         }
 
         handler = handlers.get(event_type)
