@@ -89,68 +89,68 @@ class OutreachEmail(Base):
 
 EMAIL_TEMPLATES = {
     "initial": {
-        "subject": "Your competitors are quoting in 5 mins now",
+        "subject": "Saw {company_name} - thought you'd want this",
         "body": """Hey {first_name},
 
-Be honest - how many quotes did you lose last month because you couldn't get back to them fast enough?
+We built something for removal companies that I think you'll like.
 
-Every removal company I talk to says the same thing: "By the time I called them back, they'd already booked someone else."
+Customers photograph their rooms → AI counts every item → you get a quote ready to approve in 5 minutes.
 
-Here's the fix:
+No home visits for standard jobs. No phone tag. No spreadsheets.
 
-Customer clicks your link → snaps photos of their rooms → AI counts EVERYTHING → instant quote.
+One company using it said: "I used to spend Sundays doing estimates. Now I approve quotes from the van between jobs."
 
-5 minutes. Done. They book on the spot.
+Your branding, your prices, your control. Customers think it's your own tech.
 
-One company using this quoted 23 jobs last week. His words: "I used to spend my whole Sunday doing estimates. Now I approve them from the van between jobs."
+3 free quotes to try it - takes about a minute to set up: {demo_link}
 
-I'll set you up with 3 free AI quotes - takes 60 seconds: {demo_link}
-
-Your logo. Your pricing. Customers think it's your tech.
+Worth a look.
 
 Jay
-
-P.S. The busy season's coming. The companies using AI quotes are going to eat everyone else's lunch. Don't be lunch."""
+PrimeHaul"""
     },
 
     "followup_1": {
         "subject": "Re: Your competitors are quoting in 5 mins now",
         "body": """{first_name},
 
-Quick update - 3 more removal companies signed up yesterday.
+Forgot to mention the best bit:
 
-Not trying to pressure you. Just saying - your competitors are going to start stealing your leads with instant quotes while you're still playing phone tag.
+You approve every quote before it goes out. AI does the counting, but YOU set the final price. Change it, add notes, whatever you want.
 
-The maths is brutal:
-- Old way: Customer enquires → you call back in 2 hours → they've already booked
-- New way: Customer enquires → instant AI quote → they book YOU
+So you get the speed of instant quotes without losing control.
 
-Still got your 3 free quotes waiting: {demo_link}
+Here's what the flow looks like:
+1. Customer photographs their rooms (takes them 3 mins)
+2. AI lists every item with dimensions
+3. Quote lands in your phone
+4. You tap "Approve" or adjust the price
+5. Customer gets the quote instantly
 
-60 seconds to set up. Seriously.
+That's it. No spreadsheets. No home visits for basic quotes. No phone tag.
+
+Still got your 3 free ones here: {demo_link}
 
 Jay"""
     },
 
     "followup_2": {
-        "subject": "Closing your spot",
+        "subject": "One last thought",
         "body": """Hey {first_name},
 
-Last email, I promise.
+Last one from me - don't want to clog your inbox.
 
-I'm limiting free trials in each area so companies don't all get the same advantage. Makes sense - if everyone has AI quotes, no one has the edge.
+Just wanted to share what one company told me last week:
 
-Your 3 free quotes expire in 48 hours: {demo_link}
+"The customers love it. They send photos at 10pm, wake up to a quote. Makes us look really professional."
 
-After that, you'd have to wait for the next opening.
+That's the bit I didn't expect. It's not just faster - customers actually prefer it. No awkward home visits. No "I'll call you back." Just photos, quote, done.
 
-No pressure. If you're happy with your current close rate, ignore this.
+Anyway, the offer's always there if you want it: {demo_link}
 
-But if you're losing quotes to faster competitors... this is your fix.
+Good luck with the moves.
 
-Jay
-
-P.S. One guy told me "I wish I'd done this 6 months ago." Don't be that guy in 6 months."""
+Jay"""
     },
 
     "reply_interested": {
