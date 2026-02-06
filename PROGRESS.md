@@ -1,9 +1,9 @@
 # PrimeHaul OS - Progress Log
 
-**Last Updated:** 5 February 2026
+**Last Updated:** 6 February 2026
 **Repository:** github.com/jaybo1431/primehaul
 **Branch:** main
-**Latest Commit:** `f9d80aa`
+**Latest Commit:** `8b7815b`
 
 ---
 
@@ -45,12 +45,15 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 - **Settings** - Pricing, Branding, Analytics, T&Cs (all with onboarding tips)
 
 ### Billing
-- **Pay-per-survey**: £9.99 per completed survey
+- **Prepaid credits system**: Buy credit packs upfront
+  - Starter: 10 credits for £99 (£9.90/survey)
+  - Growth: 25 credits for £225 (£9.00/survey)
+  - Pro: 50 credits for £399 (£7.98/survey)
+  - Enterprise: 100 credits for £699 (£6.99/survey)
+- **3 free credits** on signup
 - **Partner accounts**: Unlimited free surveys for infrastructure partners
-- **Enterprise tier**: Contact for 50+ surveys/month
-- 14-day free trial with 3 free surveys
-- Stripe integration
-- Customer portal for self-service
+- Stripe Checkout integration
+- Low credits warning banner when < 3 credits remaining
 
 ### Superadmin Dashboard (`/superadmin`)
 - Password-protected control center for platform owner
@@ -66,6 +69,108 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 - Each company has unique URL: `/s/{company-slug}/{token}/...`
 - Surveys ONLY appear in the correct company's dashboard
 - Complete data isolation via `company_id` foreign keys
+
+---
+
+## Session Log: 6 February 2026
+
+### Prepaid Credits System
+
+**Problem:** Pay-per-survey billing (£9.99 charged after each survey) created friction and unpredictable costs for removal companies.
+
+**Solution:** Replaced with prepaid credit packs that companies buy upfront:
+
+| Pack | Credits | Price | Per Survey |
+|------|---------|-------|------------|
+| Starter | 10 | £99 | £9.90 |
+| Growth | 25 | £225 | £9.00 |
+| Pro | 50 | £399 | £7.98 |
+| Enterprise | 100 | £699 | £6.99 |
+
+- 3 free credits on signup (replaces 14-day trial)
+- Credits deducted when survey is submitted
+- Low credits warning banner when < 3 remaining
+- Buy credits page with Stripe Checkout integration
+
+### Final Quote Price
+
+**Problem:** Boss could only approve a price range (£500-£650), but customers expected a single fixed quote.
+
+**Solution:** When boss clicks "Approve", a modal appears asking for the final fixed price. AI suggests the midpoint as default. The final price replaces the estimate range on the customer's quote.
+
+- New `final_quote_price` column on Job model
+- Modal with AI-suggested default
+- Quote preview shows single price when approved
+
+### Activity Tracking System
+
+**Purpose:** Monitor boss behavior during beta testing to collect product insights and lay foundation for self-evolving AI system.
+
+**What's Tracked:**
+- Page views with time spent
+- Button clicks and interactions (link generated, copied, shared)
+- Feature usage patterns
+- Friction points (rage clicks, long pauses, errors)
+- Session flows (user journeys)
+
+**New Module:** `app/activity_tracker.py`
+- `track_activity()` — Core tracking function
+- `track_boss_action()` — Boss-specific events
+- `track_customer_action()` — Customer survey events
+- `track_friction()` — UX friction points
+- `get_live_boss_activity()` — Real-time feed for superadmin
+- `get_funnel_analytics()` — Survey drop-off rates
+- `get_friction_hotspots()` — Pages with most friction
+- `analyze_patterns_and_suggest()` — AI-powered UX suggestions
+
+**New Superadmin Activity Dashboard:** `/superadmin/activity`
+- **Live Feed** tab — Real-time boss activity (auto-refreshes every 30s)
+- **AI Insights** tab — Detected issues with severity levels
+- **Funnel** tab — Survey conversion rates with drop-off visualization
+- **Engagement** tab — Company engagement rankings
+
+### Glowing Packing CTA (Improved)
+
+**Change:** The packing service upsell was in a collapsed `<details>` dropdown. Now it's an always-visible card with:
+- Breathing green glow animation (`glowPulse`)
+- Prominent header with 📦 icon
+- "From +£X" pricing
+- Larger checkboxes (20x20px) for easier mobile tapping
+- "Professional packing service — all materials included" footer
+
+### Variant Toggle — Ordering Fix
+
+**Bug:** Item indices mismatched between room scan view and update-variant endpoint because they used different ordering.
+
+**Fix:** Both now use `order_by(Item.id)` for consistent indexing.
+
+### Files Created
+
+- `app/activity_tracker.py` — Comprehensive activity tracking module
+- `app/templates/superadmin_activity.html` — Live activity dashboard
+- `app/templates/admin_buy_credits.html` — Credit purchase page
+- `alembic/versions/fix008_credits_system.py` — Credits column migration
+- `alembic/versions/fix009_final_quote_price.py` — Final quote price migration
+
+### Files Modified
+
+- `app/main.py` — Credits endpoints, final quote approval, activity tracking
+- `app/billing.py` — Credit pack definitions, Stripe Checkout integration
+- `app/models.py` — Added `credits` and `final_quote_price` columns
+- `app/templates/admin_dashboard_v2.html` — Credits display, tracking JS
+- `app/templates/admin_job_review_v2.html` — Final price modal
+- `app/templates/quote_preview.html` — Glowing packing CTA
+- `app/templates/superadmin_dashboard.html` — Activity link
+
+### Commits
+
+```
+8b7815b Fix: Consistent item ordering in room scan for variant toggle
+bdec679 UI: Replace hidden packing dropdown with glowing CTA card
+5aad0c8 Add activity tracking system for real-time boss behavior monitoring
+0c69784 Add final quote price - boss sets fixed price when approving
+0c92655 Implement prepaid credits system replacing pay-per-survey billing
+```
 
 ---
 
@@ -600,11 +705,13 @@ git push origin main
 1. [x] Domain setup (primehaul.co.uk working)
 2. [x] Test survey flow end-to-end
 3. [x] Fix all internal server errors
-4. [ ] Test with real companies
-5. [ ] Switch Stripe to live mode
-6. [ ] Implement actual pay-per-survey billing logic (UI done, backend needs metered billing)
-7. [ ] Email notifications (optional)
-8. [ ] Google Analytics (optional)
+4. [x] Prepaid credits billing system (replaces pay-per-survey)
+5. [x] Final quote price feature
+6. [x] Activity tracking for product insights
+7. [ ] Test with real companies
+8. [ ] Switch Stripe to live mode
+9. [ ] Email notifications (optional)
+10. [ ] Google Analytics (optional)
 
 ---
 
