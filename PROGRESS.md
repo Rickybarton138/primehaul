@@ -37,6 +37,7 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 
 ### Admin Dashboard
 - **Survey Link Generator** - Green button to create unique customer links
+- **Email Invite** - Send survey links directly to customers via email
 - **Onboarding Guide** - Step-by-step tips for first-time users
 - **Quick Approve** - Approve quotes in 30 seconds
 - **Job Review** - View photos, inventory, edit prices, correct AI detections
@@ -143,6 +144,28 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 **Bug:** Item indices mismatched between room scan view and update-variant endpoint because they used different ordering.
 
 **Fix:** Both now use `order_by(Item.id)` for consistent indexing.
+
+### Email Survey Invitations
+
+**Feature:** Bosses can now send survey links directly to customers via email from the dashboard.
+
+**How It Works:**
+1. Boss generates a survey link on the dashboard
+2. Enters customer name (optional) and email
+3. Clicks "Send Invite"
+4. Customer receives a beautifully formatted HTML email with:
+   - "Get Your Free Removal Quote" header
+   - Big green CTA button to start survey
+   - "How It Works" 3-step guide
+   - "Why Choose Us?" benefits section
+   - Company branding
+
+**Files:**
+- `app/notifications.py` — Added `send_survey_invitation()` function
+- `app/main.py` — Added `/admin/send-survey-invite` POST endpoint
+- `app/templates/admin_dashboard_v2.html` — Added email input UI + `sendEmailInvite()` JS
+
+**Analytics:** Invite sends tracked as `survey_invite_sent` events for analytics.
 
 ### Files Created
 

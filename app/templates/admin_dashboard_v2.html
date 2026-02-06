@@ -163,6 +163,19 @@
             <a id="smsShare" href="#" style="padding:6px 12px; background:rgba(255,255,255,.05); border-radius:6px; color:var(--text); text-decoration:none; font-size:12px; font-weight:600;">SMS</a>
             <a id="emailShare" href="#" style="padding:6px 12px; background:rgba(255,255,255,.05); border-radius:6px; color:var(--text); text-decoration:none; font-size:12px; font-weight:600;">Email</a>
           </div>
+
+          <!-- Email Invite Section -->
+          <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,.1);">
+            <div style="font-size:13px; font-weight:600; margin-bottom:10px;">Send directly to customer</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="text" id="customerName" placeholder="Name (optional)" style="width:120px; padding:10px 12px; background:rgba(0,0,0,.3); border:1px solid var(--hair); border-radius:6px; color:#fff; font-size:13px;">
+              <input type="email" id="customerEmail" placeholder="Customer email" style="flex:1; padding:10px 12px; background:rgba(0,0,0,.3); border:1px solid var(--hair); border-radius:6px; color:#fff; font-size:13px;">
+              <button onclick="sendEmailInvite()" id="sendEmailBtn" style="padding:10px 16px; background:#60a5fa; color:#fff; border:none; border-radius:6px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                Send Invite
+              </button>
+            </div>
+            <div id="emailStatus" style="display:none; margin-top:8px; padding:8px 12px; border-radius:6px; font-size:12px;"></div>
+          </div>
         </div>
       </div>
 
@@ -459,6 +472,77 @@
           btn.textContent = '📋 Copy';
         }, 2000);
       });
+    }
+
+    async function sendEmailInvite() {
+      const emailInput = document.getElementById('customerEmail');
+      const nameInput = document.getElementById('customerName');
+      const surveyUrl = document.getElementById('surveyLinkInput').value;
+      const btn = document.getElementById('sendEmailBtn');
+      const statusDiv = document.getElementById('emailStatus');
+
+      const email = emailInput.value.trim();
+      const name = nameInput.value.trim();
+
+      if (!email) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(255,77,79,.15)';
+        statusDiv.style.color = '#ff4d4f';
+        statusDiv.textContent = 'Please enter customer email';
+        return;
+      }
+
+      if (!surveyUrl) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(255,77,79,.15)';
+        statusDiv.style.color = '#ff4d4f';
+        statusDiv.textContent = 'Please generate a survey link first';
+        return;
+      }
+
+      // Disable button and show loading
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      statusDiv.style.display = 'none';
+
+      try {
+        const response = await fetch('/{{ company_slug }}/admin/send-survey-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_email: email,
+            customer_name: name,
+            survey_url: surveyUrl
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          statusDiv.style.display = 'block';
+          statusDiv.style.background = 'rgba(46,229,157,.15)';
+          statusDiv.style.color = '#2ee59d';
+          statusDiv.textContent = '✓ Invite sent to ' + email;
+          emailInput.value = '';
+          nameInput.value = '';
+
+          // Track the action
+          trackAction('survey_invite_sent', { email: email });
+        } else {
+          statusDiv.style.display = 'block';
+          statusDiv.style.background = 'rgba(255,77,79,.15)';
+          statusDiv.style.color = '#ff4d4f';
+          statusDiv.textContent = data.error || 'Failed to send invite';
+        }
+      } catch (e) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(255,77,79,.15)';
+        statusDiv.style.color = '#ff4d4f';
+        statusDiv.textContent = 'Network error - please try again';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Send Invite';
     }
 
     // ========== ONBOARDING ==========

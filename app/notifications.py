@@ -696,3 +696,171 @@ def send_trial_ending_reminder(company: Company, days_left: int) -> bool:
     """
 
     return send_email(company.email, subject, html_body)
+
+
+# ==========================================
+# CUSTOMER SURVEY INVITATIONS
+# ==========================================
+
+def send_survey_invitation(
+    customer_email: str,
+    customer_name: str,
+    company: Company,
+    survey_url: str
+) -> bool:
+    """
+    Send survey invitation email to a customer.
+
+    Args:
+        customer_email: Customer's email address
+        customer_name: Customer's name (optional, can be empty)
+        company: Company sending the invitation
+        survey_url: Full URL to the survey
+
+    Returns:
+        True if sent successfully
+    """
+    greeting = f"Hi {customer_name}," if customer_name else "Hi there,"
+
+    subject = f"Your Free Removal Quote from {company.company_name}"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(135deg, #2ee59d 0%, #26c785 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 24px; }}
+            .header p {{ margin: 10px 0 0 0; opacity: 0.9; }}
+            .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 12px 12px; }}
+            .cta-button {{ display: inline-block; background: #2ee59d; color: white; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 18px; margin: 25px 0; }}
+            .cta-button:hover {{ background: #26c785; }}
+            .benefits {{ background: white; padding: 25px; border-radius: 10px; margin: 25px 0; }}
+            .benefit {{ display: flex; align-items: flex-start; margin: 15px 0; }}
+            .benefit-icon {{ font-size: 24px; margin-right: 15px; }}
+            .benefit-text {{ flex: 1; }}
+            .benefit-title {{ font-weight: 600; color: #333; margin: 0; }}
+            .benefit-desc {{ color: #666; font-size: 14px; margin: 4px 0 0 0; }}
+            .how-it-works {{ background: #fff; padding: 25px; border-radius: 10px; margin: 25px 0; }}
+            .step {{ display: flex; align-items: flex-start; margin: 15px 0; }}
+            .step-num {{ background: #2ee59d; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; margin-right: 15px; flex-shrink: 0; }}
+            .footer {{ text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }}
+            .company-info {{ background: white; padding: 20px; border-radius: 10px; margin: 25px 0; text-align: center; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Get Your Free Removal Quote</h1>
+                <p>From {company.company_name}</p>
+            </div>
+
+            <div class="content">
+                <p style="font-size: 17px;">{greeting}</p>
+
+                <p style="font-size: 17px;">
+                    Thanks for your interest in our removal services! We've set up a quick survey to get you an <strong>accurate quote in minutes</strong> — no waiting around for callbacks.
+                </p>
+
+                <center>
+                    <a href="{survey_url}" class="cta-button">
+                        Get My Free Quote →
+                    </a>
+                </center>
+
+                <div class="how-it-works">
+                    <h3 style="margin-top: 0; color: #333;">How It Works</h3>
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <div>
+                            <strong>Take a few photos</strong><br>
+                            <span style="color: #666; font-size: 14px;">Snap pictures of each room — our AI does the rest</span>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <div>
+                            <strong>Get an instant quote</strong><br>
+                            <span style="color: #666; font-size: 14px;">AI-calculated pricing based on your actual items</span>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <div>
+                            <strong>Book with confidence</strong><br>
+                            <span style="color: #666; font-size: 14px;">No surprises on moving day — you know the price upfront</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="benefits">
+                    <h3 style="margin-top: 0; color: #333;">Why Choose Us?</h3>
+                    <div class="benefit">
+                        <span class="benefit-icon">⚡</span>
+                        <div class="benefit-text">
+                            <p class="benefit-title">Quote in 5 Minutes</p>
+                            <p class="benefit-desc">No waiting days for a site visit</p>
+                        </div>
+                    </div>
+                    <div class="benefit">
+                        <span class="benefit-icon">📸</span>
+                        <div class="benefit-text">
+                            <p class="benefit-title">AI-Powered Accuracy</p>
+                            <p class="benefit-desc">Our technology counts every item from your photos</p>
+                        </div>
+                    </div>
+                    <div class="benefit">
+                        <span class="benefit-icon">💰</span>
+                        <div class="benefit-text">
+                            <p class="benefit-title">Transparent Pricing</p>
+                            <p class="benefit-desc">See exactly what's included — no hidden fees</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="company-info">
+                    <p style="margin: 0; color: #666;">This quote is provided by</p>
+                    <p style="margin: 8px 0; font-size: 20px; font-weight: 700; color: #333;">{company.company_name}</p>
+                    {f'<p style="margin: 0; color: #666;">{company.phone}</p>' if company.phone else ''}
+                </div>
+
+                <center>
+                    <a href="{survey_url}" class="cta-button">
+                        Start My Quote →
+                    </a>
+                    <p style="color: #888; font-size: 13px; margin-top: 10px;">Takes less than 5 minutes</p>
+                </center>
+            </div>
+
+            <div class="footer">
+                <p>{company.company_name}</p>
+                <p style="color: #bbb; font-size: 11px;">Powered by PrimeHaul — AI-powered removal quotes</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+    text_body = f"""
+{greeting}
+
+Thanks for your interest in {company.company_name}!
+
+We've set up a quick survey to get you an accurate quote in minutes.
+
+GET YOUR FREE QUOTE: {survey_url}
+
+How it works:
+1. Take a few photos of each room
+2. Our AI calculates your quote instantly
+3. Book with confidence — no surprises
+
+This takes less than 5 minutes.
+
+{company.company_name}
+{company.phone or ''}
+    """
+
+    return send_email(customer_email, subject, html_body, text_body)

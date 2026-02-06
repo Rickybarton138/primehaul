@@ -3409,6 +3409,63 @@ async def track_boss_activity(
         return {"status": "error"}
 
 
+@app.post("/{company_slug}/admin/send-survey-invite")
+async def send_survey_invite(
+    request: Request,
+    company_slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send a survey invitation email to a customer"""
+    company = verify_company_access(company_slug, current_user)
+
+    try:
+        data = await request.json()
+        customer_email = data.get("customer_email", "").strip()
+        customer_name = data.get("customer_name", "").strip()
+        survey_url = data.get("survey_url", "").strip()
+
+        if not customer_email:
+            return JSONResponse({"error": "Customer email is required"}, status_code=400)
+
+        if not survey_url:
+            return JSONResponse({"error": "Survey URL is required"}, status_code=400)
+
+        # Basic email validation
+        import re
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", customer_email):
+            return JSONResponse({"error": "Invalid email address"}, status_code=400)
+
+        # Send the invitation email
+        from app.notifications import send_survey_invitation
+        success = send_survey_invitation(
+            customer_email=customer_email,
+            customer_name=customer_name,
+            company=company,
+            survey_url=survey_url
+        )
+
+        if success:
+            # Track the invite for analytics
+            track_event(
+                company_id=company.id,
+                event_type='survey_invite_sent',
+                metadata={
+                    'customer_email': customer_email,
+                    'customer_name': customer_name or 'Not provided',
+                    'description': f"Survey invitation sent to {customer_email}"
+                },
+                db=db
+            )
+            return JSONResponse({"success": True, "message": "Invitation sent successfully"})
+        else:
+            return JSONResponse({"error": "Failed to send email. Please check your email settings."}, status_code=500)
+
+    except Exception as e:
+        logger.error(f"Error sending survey invite: {e}")
+        return JSONResponse({"error": "Failed to send invitation"}, status_code=500)
+
+
 @app.get("/{company_slug}/admin/job/{token}", response_class=HTMLResponse)
 def admin_job_review(
     request: Request,
