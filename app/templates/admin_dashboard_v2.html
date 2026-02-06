@@ -483,6 +483,51 @@
       const banner = document.getElementById('onboardingBanner');
       if (banner) banner.remove();
     }
+
+    // ========== ACTIVITY TRACKING ==========
+    // Lightweight non-blocking analytics for product improvement
+    const sessionId = localStorage.getItem('ph_session_id') || (() => {
+      const id = Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('ph_session_id', id);
+      return id;
+    })();
+
+    function trackAction(action, metadata = {}) {
+      // Fire and forget - don't wait for response
+      fetch('/{{ company_slug }}/admin/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: action,
+          session_id: sessionId,
+          metadata: { ...metadata, page: window.location.pathname }
+        })
+      }).catch(() => {}); // Silently ignore errors
+    }
+
+    // Track key interactions
+    document.addEventListener('DOMContentLoaded', () => {
+      // Track link generation
+      const origGenerate = window.generateSurveyLink;
+      window.generateSurveyLink = function() {
+        origGenerate();
+        trackAction('link_generated');
+      };
+
+      // Track link copy
+      const origCopy = window.copySurveyLink;
+      window.copySurveyLink = function() {
+        origCopy();
+        trackAction('link_copied');
+      };
+
+      // Track share clicks
+      document.querySelectorAll('[id$="Share"]').forEach(el => {
+        el.addEventListener('click', () => {
+          trackAction('link_shared', { method: el.id.replace('Share', '') });
+        });
+      });
+    });
   </script>
 </body>
 </html>

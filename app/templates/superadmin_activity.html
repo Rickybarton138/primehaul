@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Activity - PrimeHaul Superadmin</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <style>
+    .activity-header{
+      background:linear-gradient(135deg, #1a1a2e, #16213e);
+      padding:20px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+    }
+    .live-indicator{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 12px;
+      border-radius:6px;
+      background:rgba(46,229,157,.1);
+      color:#2ee59d;
+      font-size:12px;
+      font-weight:600;
+    }
+    .live-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#2ee59d;
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse{
+      0%,100%{ opacity:1; transform:scale(1); }
+      50%{ opacity:.5; transform:scale(1.2); }
+    }
+    .activity-feed{
+      max-height:500px;
+      overflow-y:auto;
+    }
+    .activity-item{
+      display:flex;
+      gap:12px;
+      padding:12px;
+      border-bottom:1px solid rgba(255,255,255,.05);
+      transition:background 200ms;
+    }
+    .activity-item:hover{
+      background:rgba(255,255,255,.03);
+    }
+    .activity-icon{
+      width:36px;
+      height:36px;
+      border-radius:8px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
+      flex-shrink:0;
+    }
+    .activity-icon.boss{ background:rgba(96,165,250,.15); }
+    .activity-icon.customer{ background:rgba(46,229,157,.15); }
+    .activity-icon.friction{ background:rgba(255,77,79,.15); }
+    .activity-content{ flex:1; min-width:0; }
+    .activity-title{ font-weight:600; font-size:14px; }
+    .activity-meta{ font-size:12px; color:rgba(255,255,255,.5); margin-top:2px; }
+    .activity-time{ font-size:11px; color:rgba(255,255,255,.4); white-space:nowrap; }
+    .insight-card{
+      padding:16px;
+      border-radius:12px;
+      margin-bottom:12px;
+    }
+    .insight-card.high{ background:rgba(255,77,79,.1); border:1px solid rgba(255,77,79,.3); }
+    .insight-card.medium{ background:rgba(255,193,7,.1); border:1px solid rgba(255,193,7,.3); }
+    .insight-card.low{ background:rgba(96,165,250,.1); border:1px solid rgba(96,165,250,.3); }
+    .insight-badge{
+      display:inline-block;
+      padding:3px 8px;
+      border-radius:4px;
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+      margin-right:8px;
+    }
+    .insight-badge.high{ background:rgba(255,77,79,.2); color:#ff4d4f; }
+    .insight-badge.medium{ background:rgba(255,193,7,.2); color:#ffc107; }
+    .insight-badge.low{ background:rgba(96,165,250,.2); color:#60a5fa; }
+    .funnel-bar{
+      height:24px;
+      border-radius:4px;
+      background:rgba(46,229,157,.3);
+      margin:4px 0;
+      position:relative;
+      overflow:hidden;
+    }
+    .funnel-fill{
+      height:100%;
+      background:#2ee59d;
+      border-radius:4px;
+      transition:width 500ms ease;
+    }
+    .funnel-label{
+      position:absolute;
+      left:8px;
+      top:50%;
+      transform:translateY(-50%);
+      font-size:11px;
+      font-weight:600;
+      color:#000;
+      z-index:1;
+    }
+    .engagement-row{
+      display:flex;
+      align-items:center;
+      padding:10px;
+      border-radius:8px;
+      background:rgba(255,255,255,.02);
+      margin-bottom:6px;
+    }
+    .engagement-level{
+      padding:3px 8px;
+      border-radius:4px;
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .engagement-level.high{ background:rgba(46,229,157,.2); color:#2ee59d; }
+    .engagement-level.medium{ background:rgba(96,165,250,.2); color:#60a5fa; }
+    .engagement-level.low{ background:rgba(255,193,7,.2); color:#ffc107; }
+    .tab-nav{
+      display:flex;
+      gap:8px;
+      margin-bottom:16px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+      padding-bottom:12px;
+    }
+    .tab-btn{
+      padding:8px 16px;
+      border-radius:8px;
+      border:none;
+      background:transparent;
+      color:rgba(255,255,255,.6);
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      transition:all 150ms;
+    }
+    .tab-btn:hover{ background:rgba(255,255,255,.05); }
+    .tab-btn.active{ background:rgba(46,229,157,.15); color:#2ee59d; }
+    .tab-content{ display:none; }
+    .tab-content.active{ display:block; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="activity-header">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:24px; font-weight:800; color:#fff;">Live Activity Monitor</div>
+          <div style="font-size:13px; color:rgba(255,255,255,.5); margin-top:4px;">
+            Real-time boss & customer behavior tracking
+          </div>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div class="live-indicator">
+            <div class="live-dot"></div>
+            Live
+          </div>
+          <a href="/superadmin/dashboard" style="color:#60a5fa; text-decoration:none; font-size:13px;">← Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen">
+      <!-- Tab Navigation -->
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="showTab('live')">Live Feed</button>
+        <button class="tab-btn" onclick="showTab('insights')">AI Insights</button>
+        <button class="tab-btn" onclick="showTab('funnel')">Funnel</button>
+        <button class="tab-btn" onclick="showTab('engagement')">Engagement</button>
+      </div>
+
+      <!-- Live Feed Tab -->
+      <div class="tab-content active" id="tab-live">
+        <div class="group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="font-weight:700;">Boss Activity (Last 30 min)</div>
+            <button onclick="refreshFeed()" style="background:rgba(255,255,255,.1); border:none; color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">
+              Refresh
+            </button>
+          </div>
+
+          <div class="activity-feed" id="activityFeed">
+            {% if live_activity %}
+              {% for item in live_activity %}
+              <div class="activity-item">
+                <div class="activity-icon boss">👔</div>
+                <div class="activity-content">
+                  <div class="activity-title">{{ item.event_label }}</div>
+                  <div class="activity-meta">
+                    {{ item.company_name }}
+                    {% if item.job_token %} • Job #{{ item.job_token[:8] }}{% endif %}
+                    {% if item.page_url %} • {{ item.page_url }}{% endif %}
+                  </div>
+                </div>
+                <div class="activity-time">{{ item.time_ago }}</div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div style="text-align:center; padding:40px; color:rgba(255,255,255,.4);">
+                <div style="font-size:32px; margin-bottom:8px;">🔍</div>
+                <div>No recent boss activity</div>
+                <div style="font-size:12px; margin-top:4px;">Activity will appear here as bosses use the platform</div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Insights Tab -->
+      <div class="tab-content" id="tab-insights">
+        <div class="group">
+          <div style="font-weight:700; margin-bottom:16px;">AI-Detected Issues & Suggestions</div>
+
+          {% if insights %}
+            {% for insight in insights %}
+            <div class="insight-card {{ insight.severity }}">
+              <div style="display:flex; align-items:flex-start; gap:12px;">
+                <div style="flex:1;">
+                  <span class="insight-badge {{ insight.severity }}">{{ insight.severity }}</span>
+                  <span style="font-size:11px; color:rgba(255,255,255,.5); text-transform:uppercase;">{{ insight.type|replace('_', ' ') }}</span>
+                  <div style="margin-top:8px; font-size:14px; line-height:1.5;">
+                    {{ insight.suggestion }}
+                  </div>
+                </div>
+                {% if insight.auto_fixable %}
+                <button style="padding:8px 12px; background:#2ee59d; color:#000; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
+                  Auto-Fix
+                </button>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div style="text-align:center; padding:40px; color:rgba(255,255,255,.4);">
+              <div style="font-size:32px; margin-bottom:8px;">✨</div>
+              <div>No issues detected</div>
+              <div style="font-size:12px; margin-top:4px;">The AI is monitoring for patterns and will surface insights here</div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Funnel Tab -->
+      <div class="tab-content" id="tab-funnel">
+        <div class="group">
+          <div style="font-weight:700; margin-bottom:16px;">Survey Funnel (Last 7 Days)</div>
+
+          {% if funnel %}
+            {% set max_count = funnel.values()|map(attribute='count')|max %}
+            {% for stage, data in funnel.items() %}
+            <div style="margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                <span>{{ data.label }}</span>
+                <span style="color:rgba(255,255,255,.6);">
+                  {{ data.count }}
+                  {% if data.drop_off_rate is defined %}
+                    <span style="color:#ff4d4f; margin-left:8px;">↓{{ data.drop_off_rate }}%</span>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="funnel-bar">
+                <div class="funnel-fill" style="width:{{ (data.count / max_count * 100) if max_count > 0 else 0 }}%;"></div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div style="text-align:center; padding:40px; color:rgba(255,255,255,.4);">
+              No funnel data yet
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Engagement Tab -->
+      <div class="tab-content" id="tab-engagement">
+        <div class="group">
+          <div style="font-weight:700; margin-bottom:16px;">Company Engagement (Last 7 Days)</div>
+
+          {% if engagement %}
+            {% for company in engagement %}
+            <div class="engagement-row">
+              <div style="flex:1;">
+                <div style="font-weight:600;">{{ company.company_name }}</div>
+                <div style="font-size:12px; color:rgba(255,255,255,.5);">{{ company.company_slug }}</div>
+              </div>
+              <div style="text-align:right; margin-right:12px;">
+                <div style="font-weight:700;">{{ company.event_count }}</div>
+                <div style="font-size:11px; color:rgba(255,255,255,.5);">events</div>
+              </div>
+              <span class="engagement-level {{ company.engagement_level }}">{{ company.engagement_level }}</span>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div style="text-align:center; padding:40px; color:rgba(255,255,255,.4);">
+              No engagement data yet
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Auto-Evolution Status -->
+      <div class="group" style="background:rgba(167,139,250,.05); border:1px solid rgba(167,139,250,.2);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="font-size:24px;">🧠</div>
+          <div style="flex:1;">
+            <div style="font-weight:700; color:#a78bfa;">AI Auto-Evolution System</div>
+            <div style="font-size:13px; color:rgba(255,255,255,.6); margin-top:4px;">
+              Currently in <strong>observation mode</strong>. Collecting patterns, detecting friction, building intelligence.
+              Auto-apply features coming in future updates.
+            </div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:24px; font-weight:800; color:#a78bfa;">{{ total_events or 0 }}</div>
+            <div style="font-size:11px; color:rgba(255,255,255,.5);">events tracked</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function showTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+      // Show selected tab
+      document.getElementById('tab-' + tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function refreshFeed() {
+      location.reload();
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      if (document.getElementById('tab-live').classList.contains('active')) {
+        refreshFeed();
+      }
+    }, 30000);
+  </script>
+</body>
+</html>

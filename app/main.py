@@ -1025,6 +1025,37 @@ def superadmin_run_learning(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url=f"/superadmin/learning?error={str(e)}", status_code=303)
 
 
+@app.get("/superadmin/activity")
+def superadmin_activity(request: Request, db: Session = Depends(get_db)):
+    """Live activity monitor - real-time boss & customer behavior tracking"""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+
+    try:
+        from app import activity_tracker
+
+        # Get live data
+        live_activity = activity_tracker.get_live_boss_activity(db, minutes=30)
+        insights = activity_tracker.analyze_patterns_and_suggest(db)
+        funnel = activity_tracker.get_funnel_analytics(db, days=7)
+        engagement = activity_tracker.get_company_engagement(db, days=7)
+
+        # Get total events count
+        total_events = db.query(UsageAnalytics).count()
+
+        return templates.TemplateResponse("superadmin_activity.html", {
+            "request": request,
+            "live_activity": live_activity,
+            "insights": insights,
+            "funnel": funnel,
+            "engagement": engagement,
+            "total_events": total_events
+        })
+    except Exception as e:
+        logger.error(f"Superadmin activity error: {str(e)}")
+        return HTMLResponse(f"<h1>Activity Error</h1><pre>{str(e)}</pre><p><a href='/superadmin/dashboard'>Back</a></p>", status_code=500)
+
+
 @app.post("/superadmin/fix-survey-counts")
 def superadmin_fix_survey_counts(request: Request, db: Session = Depends(get_db)):
     """
@@ -3312,6 +3343,13 @@ def admin_dashboard(
     from app.billing import get_company_credits
     credit_info = get_company_credits(company)
 
+    # Track boss dashboard view
+    try:
+        from app import activity_tracker
+        activity_tracker.track_boss_action(db, str(company.id), "dashboard_view", {"awaiting_count": len(awaiting_jobs)})
+    except Exception as e:
+        logger.debug(f"Activity tracking error: {e}")
+
     return templates.TemplateResponse("admin_dashboard_v2.html", {
         "request": request,
         "company": company,
@@ -3340,6 +3378,35 @@ def dismiss_onboarding(
     company.onboarding_completed = True
     db.commit()
     return {"status": "ok"}
+
+
+@app.post("/{company_slug}/admin/track")
+async def track_boss_activity(
+    request: Request,
+    company_slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Track boss activity from client-side JavaScript.
+    Lightweight endpoint for non-blocking analytics.
+    """
+    try:
+        company = verify_company_access(company_slug, current_user)
+        data = await request.json()
+
+        from app import activity_tracker
+        activity_tracker.track_boss_action(
+            db=db,
+            company_id=str(company.id),
+            action=data.get("action", "unknown"),
+            metadata=data.get("metadata", {}),
+            session_id=data.get("session_id")
+        )
+        return {"status": "ok"}
+    except Exception as e:
+        logger.debug(f"Track endpoint error: {e}")
+        return {"status": "error"}
 
 
 @app.get("/{company_slug}/admin/job/{token}", response_class=HTMLResponse)
@@ -3429,6 +3496,17 @@ def admin_approve_job(
             },
             db=db
         )
+
+        # Track boss action for activity feed
+        try:
+            from app import activity_tracker
+            activity_tracker.track_boss_action(db, str(company.id), "job_approved", {
+                "job_token": token,
+                "final_price": final_price,
+                "customer_name": job.customer_name
+            })
+        except Exception as e:
+            logger.debug(f"Activity tracking error: {e}")
 
         # Send SMS notification to customer with final price
         if job.customer_phone:
