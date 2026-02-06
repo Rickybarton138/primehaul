@@ -114,7 +114,7 @@ I've got 3 free quotes with your name on them: {demo_link}
 Takes about 60 seconds to set up. See what you think.
 
 Jay
-PrimeHaul"""
+PrimeHaul — An intelligent move."""
     },
 
     "followup_1": {
