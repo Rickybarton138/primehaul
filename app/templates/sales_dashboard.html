@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Automation - PrimeHaul</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0b;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,.1);
+        }
+        .header h1 { font-size: 24px; font-weight: 700; }
+        .header .subtitle { color: #888; font-size: 14px; margin-top: 4px; }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #2ee59d; color: #000; }
+        .btn-primary:hover { background: #26c785; }
+        .btn-secondary { background: rgba(255,255,255,.1); color: #fff; }
+        .btn-secondary:hover { background: rgba(255,255,255,.15); }
+        .btn-danger { background: #ff4d4f; color: #fff; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card.highlight { background: rgba(46,229,157,.1); border-color: rgba(46,229,157,.3); }
+        .stat-number { font-size: 32px; font-weight: 800; }
+        .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+        .stat-card.highlight .stat-number { color: #2ee59d; }
+
+        /* Pipeline */
+        .pipeline {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        .pipeline-stage {
+            flex: 1;
+            min-width: 120px;
+            background: rgba(255,255,255,.05);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .pipeline-stage.active { background: rgba(46,229,157,.15); border: 1px solid rgba(46,229,157,.3); }
+        .pipeline-count { font-size: 24px; font-weight: 700; }
+        .pipeline-label { font-size: 11px; color: #888; margin-top: 4px; text-transform: uppercase; }
+
+        /* Cards */
+        .card {
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .card-title { font-size: 16px; font-weight: 600; }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        /* Leads Table */
+        .leads-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leads-table th, .leads-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,.1);
+        }
+        .leads-table th {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            font-weight: 600;
+        }
+        .leads-table tr:hover { background: rgba(255,255,255,.03); }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-new { background: rgba(96,165,250,.2); color: #60a5fa; }
+        .status-contacted { background: rgba(251,191,36,.2); color: #fbbf24; }
+        .status-replied { background: rgba(168,85,247,.2); color: #a855f7; }
+        .status-interested { background: rgba(46,229,157,.2); color: #2ee59d; }
+        .status-signed_up { background: rgba(46,229,157,.4); color: #2ee59d; }
+        .status-dead { background: rgba(255,255,255,.1); color: #888; }
+        .status-not_interested { background: rgba(255,77,79,.2); color: #ff4d4f; }
+
+        .sentiment-positive { color: #2ee59d; }
+        .sentiment-negative { color: #ff4d4f; }
+        .sentiment-question { color: #60a5fa; }
+        .sentiment-neutral { color: #888; }
+
+        /* Activity Feed */
+        .activity-feed { max-height: 400px; overflow-y: auto; }
+        .activity-item {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,.05);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .activity-icon.sent { background: rgba(46,229,157,.2); }
+        .activity-icon.received { background: rgba(96,165,250,.2); }
+        .activity-content { flex: 1; }
+        .activity-title { font-size: 13px; font-weight: 500; }
+        .activity-meta { font-size: 11px; color: #888; margin-top: 4px; }
+        .activity-preview { font-size: 12px; color: #666; margin-top: 6px; font-style: italic; }
+
+        /* Automation Status */
+        .automation-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(46,229,157,.1);
+            border: 1px solid rgba(46,229,157,.2);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .automation-status.paused { background: rgba(251,191,36,.1); border-color: rgba(251,191,36,.2); }
+        .automation-status.off { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2ee59d;
+            animation: pulse 2s infinite;
+        }
+        .automation-status.paused .status-dot { background: #fbbf24; animation: none; }
+        .automation-status.off .status-dot { background: #888; animation: none; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Import Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #141416;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal h2 { margin-bottom: 20px; }
+        .modal textarea {
+            width: 100%;
+            height: 200px;
+            background: rgba(0,0,0,.3);
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            background: #2ee59d;
+            color: #000;
+            border-radius: 8px;
+            font-weight: 600;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 2000;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.error { background: #ff4d4f; color: #fff; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,.05);
+            padding: 4px;
+            border-radius: 10px;
+            width: fit-content;
+        }
+        .tab {
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab:hover { background: rgba(255,255,255,.05); }
+        .tab.active { background: #2ee59d; color: #000; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .leads-table { font-size: 12px; }
+            .leads-table th, .leads-table td { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🚀 Sales Automation</h1>
+                <div class="subtitle">Private Dashboard • {{ stats.total }} leads in pipeline</div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="runAutomation()">▶ Run Cycle</button>
+                <button class="btn btn-primary" onclick="showImportModal()">+ Import Leads</button>
+            </div>
+        </div>
+
+        <!-- Automation Status -->
+        <div class="automation-status {% if not automation_enabled %}off{% endif %}" id="automationStatus">
+            <div class="status-dot"></div>
+            <div style="flex:1;">
+                <div style="font-weight:600;">{% if automation_enabled %}Automation Running{% else %}Automation Paused{% endif %}</div>
+                <div style="font-size:12px; color:#888;">
+                    {% if automation_enabled %}
+                    Checking replies every 30 min • Sending up to 5 emails per cycle
+                    {% else %}
+                    Click "Run Cycle" to send emails manually
+                    {% endif %}
+                </div>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="autoToggle" {% if automation_enabled %}checked{% endif %} onchange="toggleAutomation()" style="width:20px; height:20px;">
+                <span style="font-size:13px;">Auto</span>
+            </label>
+        </div>
+
+        <!-- Pipeline -->
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <div class="pipeline-count">{{ stats.new }}</div>
+                <div class="pipeline-label">New</div>
+            </div>
+            <div class="pipeline-stage">
+                <div class="pipeline-count">{{ stats.contacted }}</div>
+                <div class="pipeline-label">Contacted</div>
+            </div>
+            <div class="pipeline-stage">
+                <div class="pipeline-count">{{ stats.replied }}</div>
+                <div class="pipeline-label">Replied</div>
+            </div>
+            <div class="pipeline-stage active">
+                <div class="pipeline-count">{{ stats.interested }}</div>
+                <div class="pipeline-label">Interested</div>
+            </div>
+            <div class="pipeline-stage" style="background:rgba(46,229,157,.2);">
+                <div class="pipeline-count" style="color:#2ee59d;">{{ stats.signed_up }}</div>
+                <div class="pipeline-label">Signed Up</div>
+            </div>
+            <div class="pipeline-stage">
+                <div class="pipeline-count" style="color:#666;">{{ stats.dead }}</div>
+                <div class="pipeline-label">Dead</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card highlight">
+                <div class="stat-number">{{ stats.response_rate }}%</div>
+                <div class="stat-label">Response Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.conversion_rate }}%</div>
+                <div class="stat-label">Conversion Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ emails_today }}</div>
+                <div class="stat-label">Emails Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ replies_today }}</div>
+                <div class="stat-label">Replies Today</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('leads')">Leads</div>
+            <div class="tab" onclick="showTab('activity')">Activity</div>
+            <div class="tab" onclick="showTab('templates')">Templates</div>
+        </div>
+
+        <!-- Leads Tab -->
+        <div id="tab-leads" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">All Leads</div>
+                    <div class="controls">
+                        <select id="statusFilter" onchange="filterLeads()" style="padding:8px 12px; background:#1a1a1c; border:1px solid rgba(255,255,255,.2); border-radius:6px; color:#fff;">
+                            <option value="">All Status</option>
+                            <option value="new">New</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="replied">Replied</option>
+                            <option value="interested">Interested</option>
+                            <option value="signed_up">Signed Up</option>
+                            <option value="dead">Dead</option>
+                        </select>
+                    </div>
+                </div>
+                <table class="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Email</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Emails</th>
+                            <th>Sentiment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsTable">
+                        {% for lead in leads %}
+                        <tr data-status="{{ lead.status }}">
+                            <td>
+                                <div style="font-weight:500;">{{ lead.company_name }}</div>
+                                {% if lead.website %}<div style="font-size:11px; color:#888;">{{ lead.website }}</div>{% endif %}
+                            </td>
+                            <td style="font-size:13px;">{{ lead.email }}</td>
+                            <td>{{ lead.location or '-' }}</td>
+                            <td><span class="status-badge status-{{ lead.status }}">{{ lead.status }}</span></td>
+                            <td>{{ lead.emails_sent or 0 }}</td>
+                            <td>
+                                {% if lead.sentiment %}
+                                <span class="sentiment-{{ lead.sentiment }}">{{ lead.sentiment }}</span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>
+                                {% if lead.status == 'new' %}
+                                <button class="btn btn-primary btn-sm" onclick="sendEmail('{{ lead.id }}')">Send</button>
+                                {% elif lead.status == 'contacted' %}
+                                <button class="btn btn-secondary btn-sm" onclick="sendFollowup('{{ lead.id }}')">Follow Up</button>
+                                {% elif lead.status == 'replied' or lead.status == 'interested' %}
+                                <button class="btn btn-secondary btn-sm" onclick="viewThread('{{ lead.id }}')">View</button>
+                                {% endif %}
+                                <button class="btn btn-sm" style="background:none; color:#888;" onclick="markDead('{{ lead.id }}')">✕</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Activity Tab -->
+        <div id="tab-activity" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Recent Activity</div>
+                    <button class="btn btn-secondary btn-sm" onclick="refreshActivity()">↻ Refresh</button>
+                </div>
+                <div class="activity-feed" id="activityFeed">
+                    {% for item in activity %}
+                    <div class="activity-item">
+                        <div class="activity-icon {{ item.direction }}">
+                            {% if item.direction == 'sent' %}📤{% else %}📥{% endif %}
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">
+                                {% if item.direction == 'sent' %}Sent to{% else %}Reply from{% endif %}
+                                <strong>{{ item.lead_name }}</strong>
+                            </div>
+                            <div class="activity-meta">{{ item.subject }} • {{ item.sent_at[:10] if item.sent_at else 'Just now' }}</div>
+                            <div class="activity-preview">{{ item.body_preview }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Templates Tab -->
+        <div id="tab-templates" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Email Templates</div>
+                </div>
+                <div style="display:grid; gap:16px;">
+                    <div style="padding:16px; background:rgba(255,255,255,.03); border-radius:8px;">
+                        <div style="font-weight:600; margin-bottom:8px;">Initial Email</div>
+                        <div style="font-size:12px; color:#888; margin-bottom:12px;">Subject: Quick question about your quoting process</div>
+                        <pre style="font-size:12px; color:#aaa; white-space:pre-wrap; line-height:1.6;">Hi {first_name},
+
+Spotted {company_name} online - looks like you've built a solid reputation.
+
+Quick question: how long does it take you to quote a 3-bed house move right now?
+
+We've built a tool that lets your customers photograph their rooms and get an AI-calculated quote in under 5 minutes...
+
+[3 free quotes to try]</pre>
+                    </div>
+                    <div style="padding:16px; background:rgba(255,255,255,.03); border-radius:8px;">
+                        <div style="font-weight:600; margin-bottom:8px;">Follow-up 1 (Day 3)</div>
+                        <div style="font-size:12px; color:#888; margin-bottom:12px;">Subject: Re: Quick question about your quoting process</div>
+                        <pre style="font-size:12px; color:#aaa; white-space:pre-wrap;">Just bumping this - did you get a chance to look?
+
+One of our removal companies quoted 14 jobs last week using the AI tool...</pre>
+                    </div>
+                    <div style="padding:16px; background:rgba(255,255,255,.03); border-radius:8px;">
+                        <div style="font-weight:600; margin-bottom:8px;">Follow-up 2 (Day 7)</div>
+                        <div style="font-size:12px; color:#888; margin-bottom:12px;">Subject: Last one from me</div>
+                        <pre style="font-size:12px; color:#aaa; white-space:pre-wrap;">I'll assume timing's not right.
+
+If you ever want to quote jobs 10x faster without hiring more staff...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal">
+            <h2>Import Leads</h2>
+            <p style="color:#888; margin-bottom:16px;">Paste CSV content with columns: name, email, phone, website, location</p>
+            <textarea id="csvInput" placeholder="name,email,phone,website,location
+Kiwi Movers,quote@kiwimovers.co.uk,02036689726,kiwimovers.co.uk,London
+..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideImportModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="importLeads()">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Tabs
+        function showTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        // Filter leads
+        function filterLeads() {
+            const status = document.getElementById('statusFilter').value;
+            document.querySelectorAll('#leadsTable tr').forEach(row => {
+                if (!status || row.dataset.status === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Toast
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.toggle('error', isError);
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Import modal
+        function showImportModal() {
+            document.getElementById('importModal').classList.add('active');
+        }
+        function hideImportModal() {
+            document.getElementById('importModal').classList.remove('active');
+        }
+
+        // API calls
+        async function runAutomation() {
+            showToast('Running automation cycle...');
+            try {
+                const res = await fetch('/sales/run-cycle', { method: 'POST' });
+                const data = await res.json();
+                showToast(`Done! Sent ${data.initial_emails_sent} initial + ${data.followups_sent} followups. Found ${data.replies_found} replies.`);
+                setTimeout(() => location.reload(), 2000);
+            } catch (e) {
+                showToast('Error running automation', true);
+            }
+        }
+
+        async function sendEmail(leadId) {
+            try {
+                const res = await fetch(`/sales/send/${leadId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Email sent!');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(data.error || 'Failed to send', true);
+                }
+            } catch (e) {
+                showToast('Error sending email', true);
+            }
+        }
+
+        async function sendFollowup(leadId) {
+            try {
+                const res = await fetch(`/sales/followup/${leadId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Follow-up sent!');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(data.error || 'Failed to send', true);
+                }
+            } catch (e) {
+                showToast('Error sending follow-up', true);
+            }
+        }
+
+        async function markDead(leadId) {
+            if (!confirm('Mark this lead as dead?')) return;
+            try {
+                const res = await fetch(`/sales/mark-dead/${leadId}`, { method: 'POST' });
+                location.reload();
+            } catch (e) {
+                showToast('Error', true);
+            }
+        }
+
+        function viewThread(leadId) {
+            alert('Thread view coming soon - check Activity tab for now');
+        }
+
+        async function importLeads() {
+            const csv = document.getElementById('csvInput').value;
+            if (!csv.trim()) {
+                showToast('Please paste CSV content', true);
+                return;
+            }
+            try {
+                const res = await fetch('/sales/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ csv: csv })
+                });
+                const data = await res.json();
+                showToast(`Imported ${data.imported} leads (${data.skipped} skipped)`);
+                hideImportModal();
+                setTimeout(() => location.reload(), 1500);
+            } catch (e) {
+                showToast('Import failed', true);
+            }
+        }
+
+        async function toggleAutomation() {
+            const enabled = document.getElementById('autoToggle').checked;
+            try {
+                await fetch('/sales/toggle-auto', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                location.reload();
+            } catch (e) {
+                showToast('Error toggling automation', true);
+            }
+        }
+
+        function refreshActivity() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>

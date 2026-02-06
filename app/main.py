@@ -5444,3 +5444,183 @@ def get_marketplace_stats_endpoint(db: Session = Depends(get_db)):
     stats = marketplace.get_marketplace_stats(db)
     return JSONResponse(stats)
 
+
+# ============================================
+# PRIVATE SALES AUTOMATION DASHBOARD
+# ============================================
+
+SALES_PASSWORD = os.getenv("SALES_PASSWORD", "primesales2026")
+
+def verify_sales_password(request: Request) -> bool:
+    """Check if sales dashboard is authenticated via cookie"""
+    token = request.cookies.get("sales_auth")
+    if not token:
+        return False
+    import hashlib
+    expected = hashlib.sha256(SALES_PASSWORD.encode()).hexdigest()[:32]
+    return token == expected
+
+
+@app.get("/sales/login", response_class=HTMLResponse)
+def sales_login_page(request: Request):
+    """Sales dashboard login page"""
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Sales Login</title>
+        <style>
+            body { font-family: -apple-system, sans-serif; background: #0a0a0b; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+            .login-box { background: #141416; padding: 40px; border-radius: 16px; text-align: center; }
+            h1 { margin-bottom: 20px; font-size: 24px; }
+            input { width: 250px; padding: 12px; border: 1px solid #333; border-radius: 8px; background: #0a0a0b; color: #fff; font-size: 16px; margin-bottom: 15px; }
+            button { width: 250px; padding: 12px; background: #2ee59d; border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer; }
+            button:hover { background: #26c785; }
+            .error { color: #ff4d4f; margin-bottom: 15px; }
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h1>🔐 Sales Dashboard</h1>
+            <form method="post" action="/sales/login">
+                <input type="password" name="password" placeholder="Password" autofocus required><br>
+                <button type="submit">Enter</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(html)
+
+
+@app.post("/sales/login")
+def sales_login(request: Request, password: str = Form(...)):
+    """Authenticate sales dashboard"""
+    if password == SALES_PASSWORD:
+        import hashlib
+        token = hashlib.sha256(SALES_PASSWORD.encode()).hexdigest()[:32]
+        response = RedirectResponse(url="/sales", status_code=303)
+        response.set_cookie("sales_auth", token, max_age=86400 * 7, httponly=True)
+        return response
+    return RedirectResponse(url="/sales/login?error=1", status_code=303)
+
+
+@app.get("/sales", response_class=HTMLResponse)
+def sales_dashboard(request: Request, db: Session = Depends(get_db)):
+    """Private sales automation dashboard"""
+    if not verify_sales_password(request):
+        return RedirectResponse(url="/sales/login", status_code=303)
+
+    from app import outreach
+
+    # Get stats
+    stats = outreach.get_pipeline_stats(db)
+    activity = outreach.get_recent_activity(db, limit=30)
+
+    # Get all leads
+    leads = db.query(outreach.Lead).order_by(outreach.Lead.created_at.desc()).limit(200).all()
+
+    # Today's stats
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    emails_today = db.query(outreach.OutreachEmail).filter(
+        outreach.OutreachEmail.direction == "sent",
+        outreach.OutreachEmail.sent_at >= today
+    ).count()
+    replies_today = db.query(outreach.OutreachEmail).filter(
+        outreach.OutreachEmail.direction == "received",
+        outreach.OutreachEmail.sent_at >= today
+    ).count()
+
+    # Check if automation is enabled
+    automation_enabled = os.getenv("SALES_AUTOMATION", "false").lower() == "true"
+
+    return templates.TemplateResponse("sales_dashboard.html", {
+        "request": request,
+        "stats": stats,
+        "leads": leads,
+        "activity": activity,
+        "emails_today": emails_today,
+        "replies_today": replies_today,
+        "automation_enabled": automation_enabled,
+    })
+
+
+@app.post("/sales/run-cycle")
+async def sales_run_cycle(request: Request, db: Session = Depends(get_db)):
+    """Run one automation cycle"""
+    if not verify_sales_password(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    from app import outreach
+    stats = outreach.run_automation_cycle(db)
+    return JSONResponse(stats)
+
+
+@app.post("/sales/send/{lead_id}")
+async def sales_send_initial(request: Request, lead_id: str, db: Session = Depends(get_db)):
+    """Send initial email to a lead"""
+    if not verify_sales_password(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    from app import outreach
+    lead = db.query(outreach.Lead).filter(outreach.Lead.id == lead_id).first()
+    if not lead:
+        return JSONResponse({"error": "Lead not found"}, status_code=404)
+
+    success = outreach.send_initial_email(lead, db)
+    return JSONResponse({"success": success})
+
+
+@app.post("/sales/followup/{lead_id}")
+async def sales_send_followup(request: Request, lead_id: str, db: Session = Depends(get_db)):
+    """Send follow-up email to a lead"""
+    if not verify_sales_password(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    from app import outreach
+    lead = db.query(outreach.Lead).filter(outreach.Lead.id == lead_id).first()
+    if not lead:
+        return JSONResponse({"error": "Lead not found"}, status_code=404)
+
+    success = outreach.send_followup_email(lead, db)
+    return JSONResponse({"success": success})
+
+
+@app.post("/sales/mark-dead/{lead_id}")
+async def sales_mark_dead(request: Request, lead_id: str, db: Session = Depends(get_db)):
+    """Mark a lead as dead"""
+    if not verify_sales_password(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    from app import outreach
+    lead = db.query(outreach.Lead).filter(outreach.Lead.id == lead_id).first()
+    if lead:
+        lead.status = "dead"
+        db.commit()
+    return JSONResponse({"success": True})
+
+
+@app.post("/sales/import")
+async def sales_import_leads(request: Request, db: Session = Depends(get_db)):
+    """Import leads from CSV"""
+    if not verify_sales_password(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    from app import outreach
+    data = await request.json()
+    csv_content = data.get("csv", "")
+
+    result = outreach.import_leads_from_csv(csv_content, db)
+    return JSONResponse(result)
+
+
+@app.post("/sales/toggle-auto")
+async def sales_toggle_automation(request: Request):
+    """Toggle automation (just updates env awareness, actual cron is separate)"""
+    if not verify_sales_password(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    # In production this would toggle a setting in DB or env
+    # For now just acknowledge
+    return JSONResponse({"success": True})
+

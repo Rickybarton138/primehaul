@@ -145,6 +145,38 @@ The platform is fully deployed at **primehaul.co.uk** and tested working.
 
 **Fix:** Both now use `order_by(Item.id)` for consistent indexing.
 
+### Private Sales Automation Dashboard
+
+**Feature:** Fully automated lead outreach system at `/sales` (password protected).
+
+**What It Does:**
+1. **Auto-scrape leads** — Import from CSV or use built-in scraper
+2. **Send cold emails** — 3-email sequence (initial + 2 follow-ups)
+3. **Read replies** — Checks inbox via IMAP
+4. **Analyze sentiment** — Detects positive/negative/question
+5. **Auto-reply** — Sends appropriate response based on sentiment
+6. **Track pipeline** — New → Contacted → Replied → Interested → Signed Up
+
+**Email Sequence:**
+- Day 0: Initial email ("Quick question about your quoting process")
+- Day 3: Follow-up 1 ("Just bumping this...")
+- Day 7: Follow-up 2 ("Last one from me")
+
+**Files:**
+- `app/outreach.py` — Core automation logic, email templates, IMAP/SMTP
+- `app/templates/sales_dashboard.html` — Private dashboard UI
+- `app/main.py` — Routes at `/sales/*`
+- `scripts/run_sales_automation.py` — Cron job script
+- `scripts/scrape_leads.py` — Lead scraper for Checkatrade/Yell
+
+**Environment Variables:**
+- `SALES_PASSWORD` — Dashboard password (default: primesales2026)
+- `SALES_AUTOMATION` — Set to "true" to enable auto-sending
+- `SMTP_USER` / `SMTP_PASSWORD` — For sending emails
+- `IMAP_HOST` / `IMAP_PORT` — For reading replies (default: Gmail)
+
+**Access:** `https://app.primehaul.co.uk/sales`
+
 ### Email Survey Invitations
 
 **Feature:** Bosses can now send survey links directly to customers via email from the dashboard.
