@@ -628,16 +628,27 @@
     /* Responsive */
     @media (max-width: 768px) {
       .sticky-header {
-        padding: 16px 20px;
+        padding: 14px 16px;
       }
 
       .logo {
-        font-size: 24px;
+        font-size: 22px;
+      }
+
+      /* Hide tagline on mobile to prevent overflow */
+      .header-tagline {
+        display: none !important;
       }
 
       .header-cta {
-        padding: 10px 20px;
-        font-size: 14px;
+        padding: 10px 16px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .header-login {
+        padding: 8px 12px !important;
+        font-size: 13px !important;
       }
 
       .hero {
@@ -694,10 +705,10 @@
   <header class="sticky-header">
     <div style="display:flex; align-items:center; gap:16px;">
       <div class="logo">primehaul</div>
-      <div style="color:#888; font-size:14px; font-weight:500; border-left:1px solid #333; padding-left:16px;">An intelligent move.</div>
+      <div class="header-tagline" style="color:#888; font-size:14px; font-weight:500; border-left:1px solid #333; padding-left:16px;">An intelligent move.</div>
     </div>
-    <div style="display:flex; gap:12px; align-items:center;">
-      <a href="/auth/login" style="color:#888; text-decoration:none; font-weight:600; padding:10px 16px;">Login</a>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <a href="/auth/login" class="header-login" style="color:#888; text-decoration:none; font-weight:600; padding:10px 16px;">Login</a>
       <a href="/auth/signup" class="header-cta">Get 3 Free Credits</a>
     </div>
   </header>
