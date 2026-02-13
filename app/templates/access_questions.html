@@ -492,7 +492,15 @@
 {% block footer %}
   <div class="footer footer-clean">
     <div class="footer-inner">
-      <button id="continueBtn" class="btn ready" type="submit" form="accessForm">
+      <!-- Validation error banner (hidden by default) -->
+      <div id="validationError" class="validation-error hidden">
+        <div class="validation-error-icon">⚠️</div>
+        <div class="validation-error-text">
+          <div class="validation-error-title">Please complete the following:</div>
+          <ul id="validationErrorList" class="validation-error-list"></ul>
+        </div>
+      </div>
+      <button id="continueBtn" class="btn ready" type="button" onclick="validateAndSubmit()">
         Continue to Move Date
       </button>
       <div class="microhint" style="text-align:center; margin-top:8px;">
@@ -500,4 +508,162 @@
       </div>
     </div>
   </div>
+
+  <style>
+    .validation-error {
+      background: rgba(255, 80, 80, 0.15);
+      border: 1px solid rgba(255, 80, 80, 0.4);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      animation: shake 0.4s ease-in-out;
+    }
+    .validation-error.hidden {
+      display: none;
+    }
+    .validation-error-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .validation-error-title {
+      font-weight: 600;
+      color: #ff6b6b;
+      margin-bottom: 6px;
+    }
+    .validation-error-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .validation-error-list li {
+      margin-bottom: 4px;
+    }
+    .field-error {
+      border-color: rgba(255, 80, 80, 0.6) !important;
+      background: rgba(255, 80, 80, 0.08) !important;
+    }
+    .field-error-label {
+      color: #ff6b6b !important;
+    }
+    .floor-btn.field-error {
+      border-color: rgba(255, 80, 80, 0.6) !important;
+    }
+    .radio-card.field-error .radio-card-content {
+      border-color: rgba(255, 80, 80, 0.6) !important;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+  </style>
+
+  <script>
+  function validateAndSubmit() {
+    const form = document.getElementById('accessForm');
+    const errorBanner = document.getElementById('validationError');
+    const errorList = document.getElementById('validationErrorList');
+    const errors = [];
+
+    // Clear previous errors
+    document.querySelectorAll('.field-error, .field-error-label').forEach(el => {
+      el.classList.remove('field-error', 'field-error-label');
+    });
+
+    // Helper to add error and highlight field
+    function addError(message, fieldSelector, labelText) {
+      errors.push({ message, fieldSelector, labelText });
+      const field = document.querySelector(fieldSelector);
+      if (field) {
+        field.classList.add('field-error');
+        // Find and highlight the label
+        const formField = field.closest('.form-field');
+        if (formField) {
+          const label = formField.querySelector('.form-label');
+          if (label) label.classList.add('field-error-label');
+        }
+      }
+    }
+
+    // PICKUP VALIDATION
+    // Lift
+    const pickupLift = document.querySelector('input[name="pickup_has_lift"]:checked');
+    if (!pickupLift) {
+      addError('Pickup: Is there a lift?', '.radio-group input[name="pickup_has_lift"]', 'lift');
+      document.querySelectorAll('input[name="pickup_has_lift"]').forEach(r => {
+        r.closest('.radio-card').classList.add('field-error');
+      });
+    }
+
+    // Parking type
+    const pickupParking = document.querySelector('select[name="pickup_parking_type"]');
+    if (!pickupParking.value) {
+      addError('Pickup: Parking situation', 'select[name="pickup_parking_type"]', 'parking');
+    }
+
+    // DROPOFF VALIDATION
+    // Lift
+    const dropoffLift = document.querySelector('input[name="dropoff_has_lift"]:checked');
+    if (!dropoffLift) {
+      addError('Dropoff: Is there a lift?', '.radio-group input[name="dropoff_has_lift"]', 'lift');
+      document.querySelectorAll('input[name="dropoff_has_lift"]').forEach(r => {
+        r.closest('.radio-card').classList.add('field-error');
+      });
+    }
+
+    // Parking type
+    const dropoffParking = document.querySelector('select[name="dropoff_parking_type"]');
+    if (!dropoffParking.value) {
+      addError('Dropoff: Parking situation', 'select[name="dropoff_parking_type"]', 'parking');
+    }
+
+    // Show/hide error banner
+    if (errors.length > 0) {
+      errorList.innerHTML = errors.map(e => `<li>${e.message}</li>`).join('');
+      errorBanner.classList.remove('hidden');
+
+      // Scroll to first error field
+      const firstErrorField = document.querySelector('.field-error');
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      return false;
+    }
+
+    // All valid - submit form
+    errorBanner.classList.add('hidden');
+    form.submit();
+  }
+
+  // Clear error styling when user interacts with fields
+  document.querySelectorAll('input[name="pickup_has_lift"], input[name="dropoff_has_lift"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const name = this.name;
+      document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+        r.closest('.radio-card').classList.remove('field-error');
+      });
+      const formField = this.closest('.form-field');
+      if (formField) {
+        const label = formField.querySelector('.form-label');
+        if (label) label.classList.remove('field-error-label');
+      }
+    });
+  });
+
+  document.querySelectorAll('select[name="pickup_parking_type"], select[name="dropoff_parking_type"]').forEach(select => {
+    select.addEventListener('change', function() {
+      this.classList.remove('field-error');
+      const formField = this.closest('.form-field');
+      if (formField) {
+        const label = formField.querySelector('.form-label');
+        if (label) label.classList.remove('field-error-label');
+      }
+    });
+  });
+  </script>
 {% endblock %}
