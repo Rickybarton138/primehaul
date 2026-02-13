@@ -10,10 +10,18 @@
 
     <div style="background:rgba(46,229,157,.08); border-radius:12px; padding:20px; border:1px solid rgba(46,229,157,.2); margin-bottom:16px;">
       <div style="text-align:center; margin-bottom:12px;">
+        {% if job.final_quote_price %}
+        <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">Your Quote</div>
+        <div style="font-size:36px; font-weight:800; color:#2ee59d;">
+          £{{ job.final_quote_price }}
+        </div>
+        <div style="font-size:13px; color:rgba(46,229,157,.8); margin-top:6px;">Final price confirmed</div>
+        {% else %}
         <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">Estimated Cost</div>
         <div style="font-size:32px; font-weight:800; color:#2ee59d;">
           £{{ quote.estimate_low }} – £{{ quote.estimate_high }}
         </div>
+        {% endif %}
       </div>
 
       <div style="border-top:1px solid rgba(46,229,157,.2); padding-top:12px; margin-top:12px;">
@@ -68,6 +76,15 @@
           style="margin-top:4px; margin-right:12px; width:20px; height:20px; flex-shrink:0;"
         >
         <div style="flex:1;">
+          {% if job.final_quote_price %}
+          <div style="font-weight:600; margin-bottom:6px;">
+            I accept this quote of £{{ job.final_quote_price }}
+          </div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.6;">
+            I confirm this is the agreed price for my move based on the information and photos provided.
+            Additional services requested on moving day may incur extra charges.
+          </div>
+          {% else %}
           <div style="font-weight:600; margin-bottom:6px;">
             I accept this quote estimate
           </div>
@@ -75,6 +92,7 @@
             I understand this is an estimate based on the information and photos provided.
             The final price may vary depending on the actual volume and any additional services required on moving day.
           </div>
+          {% endif %}
         </div>
       </label>
 
