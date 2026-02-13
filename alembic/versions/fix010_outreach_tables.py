@@ -1,7 +1,7 @@
 """Add outreach/sales automation tables
 
 Revision ID: fix010_outreach
-Revises: fix009_final_quote_price
+Revises: fix009
 Create Date: 2026-02-06
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers
 revision = 'fix010_outreach'
-down_revision = 'fix009_final_quote_price'
+down_revision = 'fix009'
 branch_labels = None
 depends_on = None
 
