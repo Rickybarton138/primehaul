@@ -125,6 +125,49 @@
       border-color: rgba(46,229,157,.4);
       outline: none;
     }
+
+    /* Photo processing state */
+    .photo-processing {
+      position: relative;
+    }
+    .photo-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+    }
+    .photo-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #2ee59d;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Better upload progress styling */
+    #uploadWrap {
+      background: rgba(46, 229, 157, 0.08);
+      border: 1px solid rgba(46, 229, 157, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+    #uploadLabel {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2ee59d;
+      margin-bottom: 8px;
+    }
   </style>
 
   <script>
@@ -278,7 +321,7 @@
       }
     }
 
-    // Photo upload handler
+    // Photo upload handler with instant preview
     (function () {
       const uploadUrl = "/s/{{ company_slug }}/{{ token }}/room/{{ room_id }}/upload-json";
 
@@ -293,36 +336,81 @@
       const photoGrid = document.getElementById("photoGrid");
       const photoCount = document.getElementById("photoCount");
 
-      function setUploading(on){
+      // Track existing photos for proper counting
+      let existingPhotoCount = {{ photos|length if photos else 0 }};
+      let pendingPreviews = [];
+
+      function setUploading(on, phase){
         if(on){
           wrap.classList.remove("hidden");
-          fill.style.width = "0%";
-          label.textContent = "✨ Analyzing with AI...";
           takeBtn.disabled = true;
           takeBtn.classList.remove("ready");
-          takeBtn.textContent = "⏳ Analyzing...";
+          if(phase === 'uploading'){
+            takeBtn.textContent = "📤 Uploading...";
+            label.textContent = "Uploading photos...";
+          } else {
+            takeBtn.textContent = "🤖 AI Analyzing...";
+            label.textContent = "✨ AI detecting items...";
+          }
         } else {
+          wrap.classList.add("hidden");
           takeBtn.disabled = false;
           takeBtn.classList.add("ready");
           takeBtn.textContent = "📸 Take Photos";
         }
       }
 
-      function setProgress(pct){
+      function setProgress(pct, phase){
         const clamped = Math.max(0, Math.min(100, pct));
         fill.style.width = clamped + "%";
-        label.textContent = clamped >= 100 ? "✨ Analyzing with AI..." : ("Uploading… " + clamped + "%");
+        if(phase === 'uploading'){
+          label.textContent = clamped >= 100 ? "Upload complete!" : ("Uploading… " + clamped + "%");
+        } else {
+          label.textContent = "✨ AI detecting items...";
+        }
       }
 
-      function renderPhotos(photos){
-        if(!photos || photos.length === 0) return;
-
+      // Show instant local preview before upload
+      function showLocalPreviews(files){
         photosCard.classList.remove("hidden");
-        photoCount.textContent = String(photos.length);
+        pendingPreviews = [];
 
-        photoGrid.innerHTML = photos.map(p =>
-          `<div class="photo"><img class="photoimg" src="${escapeHtml(p.url)}" alt="Photo" loading="lazy"/></div>`
-        ).join("");
+        for(const file of files){
+          const reader = new FileReader();
+          reader.onload = function(e){
+            const previewHtml = `
+              <div class="photo photo-processing" data-preview="true">
+                <img class="photoimg" src="${e.target.result}" alt="Processing..." />
+                <div class="photo-overlay">
+                  <div class="photo-spinner"></div>
+                </div>
+              </div>
+            `;
+            photoGrid.insertAdjacentHTML('beforeend', previewHtml);
+            pendingPreviews.push(e.target.result);
+            photoCount.textContent = String(existingPhotoCount + pendingPreviews.length);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+
+      // Replace previews with actual server photos
+      function finalizePhotos(serverPhotos){
+        // Remove all preview photos
+        const previews = photoGrid.querySelectorAll('[data-preview="true"]');
+        previews.forEach(p => p.remove());
+        pendingPreviews = [];
+
+        // Add server photos
+        if(serverPhotos && serverPhotos.length > 0){
+          existingPhotoCount = serverPhotos.length;
+          photoCount.textContent = String(serverPhotos.length);
+
+          // Re-render all photos from server
+          photoGrid.innerHTML = serverPhotos.map(p =>
+            `<div class="photo"><img class="photoimg" src="${escapeHtml(p.url)}" alt="Photo" loading="lazy"/></div>`
+          ).join("");
+        }
       }
 
       takeBtn.addEventListener("click", () => input.click());
@@ -330,8 +418,11 @@
       input.addEventListener("change", async () => {
         if (!input.files || input.files.length === 0) return;
 
-        setUploading(true);
-        _itemsStatus.textContent = "Processing…";
+        // Show instant previews
+        showLocalPreviews(input.files);
+
+        setUploading(true, 'uploading');
+        _itemsStatus.textContent = "Detecting items...";
 
         const data = new FormData();
         for (const f of input.files) data.append("photos", f);
@@ -342,24 +433,41 @@
 
           xhr.upload.onprogress = function (evt) {
             if (!evt.lengthComputable) return;
-            setProgress(Math.round((evt.loaded / evt.total) * 100));
+            const pct = Math.round((evt.loaded / evt.total) * 100);
+            setProgress(pct, 'uploading');
+            if(pct >= 100){
+              // Upload done, now AI is analyzing
+              setUploading(true, 'analyzing');
+              fill.style.width = "100%";
+            }
           };
 
           xhr.onload = function () {
             setUploading(false);
 
             if (xhr.status < 200 || xhr.status >= 300) {
-              showToast("Upload failed");
+              showToast("Upload failed - please try again");
+              // Remove failed previews
+              const previews = photoGrid.querySelectorAll('[data-preview="true"]');
+              previews.forEach(p => p.remove());
+              pendingPreviews = [];
+              photoCount.textContent = String(existingPhotoCount);
               return;
             }
 
             const payload = JSON.parse(xhr.responseText || "{}");
             if (!payload.ok) {
-              showToast("Upload failed");
+              showToast("Upload failed - please try again");
+              const previews = photoGrid.querySelectorAll('[data-preview="true"]');
+              previews.forEach(p => p.remove());
+              pendingPreviews = [];
+              photoCount.textContent = String(existingPhotoCount);
               return;
             }
 
-            renderPhotos(payload.photos || []);
+            // Replace previews with server photos
+            finalizePhotos(payload.photos || []);
+
             const newItems = (payload.items_json && payload.items_json.items) ? payload.items_json.items : [];
             // Add client-side variants for newly detected items
             newItems.forEach(it => {
@@ -367,18 +475,31 @@
             });
             currentItems = newItems;
             renderItems(currentItems);
-            showToast("✅ Items detected!");
+
+            if(newItems.length > 0){
+              showToast(`✅ Found ${newItems.length} items!`);
+            } else {
+              showToast("📷 Photo saved - no items detected");
+            }
           };
 
           xhr.onerror = function () {
             setUploading(false);
-            showToast("Upload failed");
+            showToast("Connection error - please try again");
+            const previews = photoGrid.querySelectorAll('[data-preview="true"]');
+            previews.forEach(p => p.remove());
+            pendingPreviews = [];
+            photoCount.textContent = String(existingPhotoCount);
           };
 
           xhr.send(data);
         } catch (e) {
           setUploading(false);
-          showToast("Upload failed");
+          showToast("Error - please try again");
+          const previews = photoGrid.querySelectorAll('[data-preview="true"]');
+          previews.forEach(p => p.remove());
+          pendingPreviews = [];
+          photoCount.textContent = String(existingPhotoCount);
         } finally {
           input.value = "";
         }

@@ -1631,8 +1631,8 @@ def room_scan_get(request: Request, company_slug: str, token: str, room_id: str,
         "summary": room.summary or ""
     }
 
-    # Build photos list for template
-    photos_list = [{"filename": p.filename, "url": f"/static/{p.storage_path}"} for p in photos]
+    # Build photos list for template (use protected photo endpoint)
+    photos_list = [{"filename": p.filename, "url": f"/photo/{company.id}/{token}/{p.filename}"} for p in photos]
 
     # Variant map for client-side matching after AJAX photo uploads
     variant_map_js = get_variant_map_for_js()
@@ -1900,7 +1900,7 @@ async def room_scan_upload_json(
                 storage_path=storage_path
             )
             db.add(photo)
-            photo_records.append({"filename": fname, "url": f"/static/{storage_path}"})
+            photo_records.append({"filename": fname, "url": f"/photo/{company.id}/{token}/{fname}"})
             logger.info(f"Saved photo: {fname}")
         except Exception as e:
             logger.error(f"Error saving photo {f.filename}: {e}")
