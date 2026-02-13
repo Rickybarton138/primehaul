@@ -5677,3 +5677,60 @@ async def sales_toggle_automation(request: Request):
     # For now just acknowledge
     return JSONResponse({"success": True})
 
+
+# ============================================================================
+# TEXT-TO-SPEECH API (OpenAI TTS for natural voice guidance)
+# ============================================================================
+
+@app.post("/api/speak")
+async def text_to_speech(request: Request):
+    """
+    Convert text to natural-sounding speech using OpenAI TTS.
+    Returns MP3 audio data.
+    """
+    try:
+        from openai import OpenAI
+        import hashlib
+
+        data = await request.json()
+        text = data.get("text", "").strip()
+
+        if not text:
+            return JSONResponse({"error": "No text provided"}, status_code=400)
+
+        # Limit text length to prevent abuse
+        if len(text) > 500:
+            text = text[:500]
+
+        # Check cache first (simple file-based cache)
+        cache_dir = Path("tts_cache")
+        cache_dir.mkdir(exist_ok=True)
+        cache_key = hashlib.md5(text.encode()).hexdigest()
+        cache_file = cache_dir / f"{cache_key}.mp3"
+
+        if cache_file.exists():
+            # Serve from cache
+            audio_data = cache_file.read_bytes()
+            return Response(content=audio_data, media_type="audio/mpeg")
+
+        # Generate new audio via OpenAI TTS
+        client = OpenAI()
+        response = client.audio.speech.create(
+            model="tts-1",  # tts-1 is faster, tts-1-hd is higher quality
+            voice="nova",   # nova is friendly and natural, other options: alloy, echo, fable, onyx, shimmer
+            input=text,
+            response_format="mp3"
+        )
+
+        # Get audio bytes
+        audio_data = response.content
+
+        # Cache for future requests
+        cache_file.write_bytes(audio_data)
+
+        return Response(content=audio_data, media_type="audio/mpeg")
+
+    except Exception as e:
+        logger.error(f"TTS error: {e}")
+        return JSONResponse({"error": "Speech generation failed"}, status_code=500)
+

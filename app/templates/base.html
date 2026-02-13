@@ -140,54 +140,97 @@
         });
 
         // =============================================
-        // VOICE GUIDE FUNCTIONALITY
+        // VOICE GUIDE FUNCTIONALITY (OpenAI TTS)
         // =============================================
         const voiceToggle = document.getElementById('voiceToggle');
         const voiceIcon = voiceToggle ? voiceToggle.querySelector('.voice-icon') : null;
         let voiceEnabled = localStorage.getItem('ph-voice-guide') === 'true';
+        let currentAudio = null;
+        let isSpeaking = false;
 
-        // Check if speech synthesis is supported
-        const speechSupported = 'speechSynthesis' in window;
-
-        function updateVoiceIcon() {
+        function updateVoiceIcon(loading) {
           if (voiceIcon) {
-            voiceIcon.textContent = voiceEnabled ? '🔊' : '🔇';
+            if (loading) {
+              voiceIcon.textContent = '⏳';
+            } else {
+              voiceIcon.textContent = voiceEnabled ? '🔊' : '🔇';
+            }
           }
           if (voiceToggle) {
             voiceToggle.title = voiceEnabled ? 'Voice guide ON - tap to turn off' : 'Voice guide OFF - tap to turn on';
           }
         }
 
-        function speak(text, priority) {
-          if (!voiceEnabled || !speechSupported) return;
+        async function speak(text) {
+          if (!voiceEnabled || !text || isSpeaking) return;
 
-          // Cancel any ongoing speech
-          window.speechSynthesis.cancel();
+          // Stop any currently playing audio
+          if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+          }
 
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 0.9; // Slightly slower for clarity
-          utterance.pitch = 1;
-          utterance.volume = 1;
+          try {
+            isSpeaking = true;
+            updateVoiceIcon(true); // Show loading
 
-          // Try to use a British English voice
-          const voices = window.speechSynthesis.getVoices();
-          const britishVoice = voices.find(v => v.lang === 'en-GB') || voices.find(v => v.lang.startsWith('en'));
-          if (britishVoice) utterance.voice = britishVoice;
+            // Call OpenAI TTS API
+            const response = await fetch('/api/speak', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: text })
+            });
 
-          window.speechSynthesis.speak(utterance);
+            if (!response.ok) {
+              throw new Error('TTS request failed');
+            }
+
+            // Create audio from response
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            currentAudio = new Audio(audioUrl);
+
+            currentAudio.onended = function() {
+              isSpeaking = false;
+              updateVoiceIcon(false);
+              URL.revokeObjectURL(audioUrl);
+            };
+
+            currentAudio.onerror = function() {
+              isSpeaking = false;
+              updateVoiceIcon(false);
+            };
+
+            updateVoiceIcon(false);
+            await currentAudio.play();
+
+          } catch (err) {
+            console.error('Voice guide error:', err);
+            isSpeaking = false;
+            updateVoiceIcon(false);
+          }
+        }
+
+        function stopSpeaking() {
+          if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+          }
+          isSpeaking = false;
+          updateVoiceIcon(false);
         }
 
         function toggleVoice() {
           voiceEnabled = !voiceEnabled;
           localStorage.setItem('ph-voice-guide', voiceEnabled ? 'true' : 'false');
-          updateVoiceIcon();
+          updateVoiceIcon(false);
 
           if (voiceEnabled) {
             speak('Voice guide is now on. I will help you through each step.');
             // Speak current page guidance after the intro
-            setTimeout(() => speakPageGuidance(), 2500);
+            setTimeout(() => speakPageGuidance(), 4000);
           } else {
-            window.speechSynthesis.cancel();
+            stopSpeaking();
           }
         }
 
@@ -202,27 +245,21 @@
         }
 
         // Initialize voice
-        updateVoiceIcon();
+        updateVoiceIcon(false);
 
         if (voiceToggle) {
           voiceToggle.addEventListener('click', toggleVoice);
         }
 
-        // Wait for voices to load, then speak page guidance
-        if (speechSupported) {
-          // Voices may load async
-          if (window.speechSynthesis.getVoices().length > 0) {
-            setTimeout(speakPageGuidance, 500);
-          } else {
-            window.speechSynthesis.addEventListener('voiceschanged', function() {
-              setTimeout(speakPageGuidance, 500);
-            }, { once: true });
-          }
+        // Speak page guidance on load if voice is enabled
+        if (voiceEnabled) {
+          setTimeout(speakPageGuidance, 800);
         }
 
         // Make speak function globally available for page-specific triggers
         window.phSpeak = speak;
         window.phVoiceEnabled = function() { return voiceEnabled; };
+        window.phStopSpeaking = stopSpeaking;
       })();
     </script>
   </body>
