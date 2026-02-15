@@ -68,13 +68,15 @@
 
 /* Theme Toggle Button */
 .theme-toggle{
-  background:none;
-  border:none;
+  background:rgba(255,255,255,.08);
+  border:1px solid var(--hair);
   cursor:pointer;
-  padding:8px;
-  border-radius:8px;
+  padding:6px 10px;
+  border-radius:20px;
   color:var(--muted);
-  font-size:18px;
+  font-size:12px;
+  font-weight:600;
+  font-family:inherit;
   transition:all var(--timing-fast) var(--ease-smooth);
   display:flex;
   align-items:center;
@@ -82,13 +84,14 @@
 }
 .theme-toggle:hover{
   background:var(--accent-light);
+  border-color:var(--accent);
   color:var(--text);
 }
 .theme-toggle:active{
-  transform:scale(0.9);
+  transform:scale(0.95);
 }
 
-/* Voice Toggle Button - more prominent than theme toggle */
+/* Voice Toggle Button */
 .voice-toggle{
   background:rgba(255,255,255,.08);
   border:1px solid var(--hair);
@@ -96,14 +99,16 @@
   padding:6px 10px;
   border-radius:20px;
   color:var(--muted);
-  font-size:14px;
+  font-size:12px;
+  font-family:inherit;
   transition:all var(--timing-fast) var(--ease-smooth);
   display:flex;
   align-items:center;
-  gap:5px;
+  gap:4px;
 }
 .voice-toggle .voice-icon{
-  font-size:16px;
+  font-size:12px;
+  font-weight:600;
 }
 .voice-toggle .voice-label{
   font-size:12px;
@@ -122,6 +127,9 @@
   color:#2ee59d;
 }
 .voice-toggle.voice-on .voice-label{
+  color:#2ee59d;
+}
+.voice-toggle.voice-on .voice-icon{
   color:#2ee59d;
 }
 

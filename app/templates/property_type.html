@@ -2,7 +2,7 @@
 
 {% block content %}
   <!-- Voice guidance for this page -->
-  <div id="voiceGuidance" data-message="What type of property are we collecting from? Tap the one that matches. Then we'll ask about your delivery property too." hidden></div>
+  <div id="voiceGuidance" data-message="What type of property are we collecting from? Just tap the one that matches. Once you've picked that, we'll ask about your delivery property too." hidden></div>
 
   <form id="propForm" method="post" action="/s/{{ company_slug }}/{{ token }}/property">
     <input type="hidden" id="property_type" name="property_type" value="{{ property_type or '' }}"/>

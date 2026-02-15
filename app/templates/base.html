@@ -40,11 +40,11 @@
           </div>
 
           <button class="voice-toggle" id="voiceToggle" aria-label="Toggle voice guide" title="Voice guide">
-            <span class="voice-icon">🔇</span>
+            <span class="voice-icon">On</span>
             <span class="voice-label">Voice</span>
           </button>
           <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode" title="Toggle theme">
-            <span class="theme-icon">🌙</span>
+            <span class="theme-icon">Dark</span>
           </button>
         </div>
 
@@ -108,12 +108,12 @@
           if (theme === 'light') {
             document.documentElement.classList.add('light-mode');
             document.body.classList.add('light-mode');
-            if (themeIcon) themeIcon.textContent = '☀️';
+            if (themeIcon) themeIcon.textContent = 'Light';
             if (themeColor) themeColor.setAttribute('content', '#f5f5f7');
           } else {
             document.documentElement.classList.remove('light-mode');
             document.body.classList.remove('light-mode');
-            if (themeIcon) themeIcon.textContent = '🌙';
+            if (themeIcon) themeIcon.textContent = 'Dark';
             if (themeColor) themeColor.setAttribute('content', '#0b0b0c');
           }
         }
@@ -142,6 +142,7 @@
 
         // =============================================
         // VOICE GUIDE FUNCTIONALITY (OpenAI TTS)
+        // Instant start, browser-cached, mobile-safe
         // =============================================
         const voiceToggle = document.getElementById('voiceToggle');
         const voiceIcon = voiceToggle ? voiceToggle.querySelector('.voice-icon') : null;
@@ -149,17 +150,18 @@
         let voiceEnabled = localStorage.getItem('ph-voice-guide') !== 'false';
         let currentAudio = null;
         let isSpeaking = false;
+        let pendingRetry = null;
 
         function updateVoiceUI(loading) {
           if (voiceIcon) {
             if (loading) {
-              voiceIcon.textContent = '⏳';
+              voiceIcon.textContent = 'On';
             } else {
-              voiceIcon.textContent = voiceEnabled ? '🔊' : '🔇';
+              voiceIcon.textContent = voiceEnabled ? 'On' : 'Off';
             }
           }
           if (voiceLabel) {
-            voiceLabel.textContent = voiceEnabled ? 'ON' : 'Voice';
+            voiceLabel.textContent = 'Voice';
           }
           if (voiceToggle) {
             voiceToggle.title = voiceEnabled ? 'Voice guide is ON - tap to turn off' : 'Tap to enable voice guide';
@@ -171,33 +173,70 @@
           }
         }
 
-        async function speak(text) {
-          if (!voiceEnabled || !text || isSpeaking) return;
-
-          // Stop any currently playing audio
-          if (currentAudio) {
-            currentAudio.pause();
-            currentAudio = null;
+        function clearPendingRetry() {
+          if (pendingRetry) {
+            document.removeEventListener('click', pendingRetry, true);
+            document.removeEventListener('touchstart', pendingRetry, true);
+            document.removeEventListener('touchend', pendingRetry, true);
+            document.removeEventListener('scroll', pendingRetry, true);
+            pendingRetry = null;
           }
+        }
+
+        // Simple hash for browser cache keys
+        function voiceHash(s) {
+          for (var h = 0, i = 0; i < s.length; i++)
+            h = ((h << 5) - h + s.charCodeAt(i)) & 0x7fffffff;
+          return h.toString(36);
+        }
+
+        // Fetch audio with browser-side caching (instant on revisit)
+        async function fetchVoiceAudio(text) {
+          var cacheKey = '/ph-voice/' + voiceHash(text);
+
+          // Try browser Cache API first — zero network, instant
+          if ('caches' in window) {
+            try {
+              var cache = await caches.open('ph-voice-v1');
+              var hit = await cache.match(cacheKey);
+              if (hit) return await hit.blob();
+
+              // Not cached — fetch from server and cache for next time
+              var resp = await fetch('/api/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+              });
+              if (!resp.ok) throw new Error('TTS failed');
+              cache.put(cacheKey, resp.clone());
+              return await resp.blob();
+            } catch (e) { /* fallthrough to direct fetch */ }
+          }
+
+          // Fallback: direct fetch (no caching)
+          var resp = await fetch('/api/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+          });
+          if (!resp.ok) throw new Error('TTS failed');
+          return await resp.blob();
+        }
+
+        async function speak(text) {
+          if (!voiceEnabled || !text) return;
+
+          clearPendingRetry();
+          stopSpeaking();
 
           try {
             isSpeaking = true;
-            updateVoiceUI(true); // Show loading
+            updateVoiceUI(true);
 
-            // Call OpenAI TTS API
-            const response = await fetch('/api/speak', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: text })
-            });
+            var audioBlob = await fetchVoiceAudio(text);
+            if (!voiceEnabled) { isSpeaking = false; updateVoiceUI(false); return; }
 
-            if (!response.ok) {
-              throw new Error('TTS request failed');
-            }
-
-            // Create audio from response
-            const audioBlob = await response.blob();
-            const audioUrl = URL.createObjectURL(audioBlob);
+            var audioUrl = URL.createObjectURL(audioBlob);
             currentAudio = new Audio(audioUrl);
 
             currentAudio.onended = function() {
@@ -212,7 +251,33 @@
             };
 
             updateVoiceUI(false);
-            await currentAudio.play();
+
+            try {
+              await currentAudio.play();
+            } catch (playErr) {
+              // Mobile autoplay blocked — audio is loaded, plays INSTANTLY on first tap
+              isSpeaking = false;
+
+              var queuedAudio = currentAudio;
+              pendingRetry = function(e) {
+                if (voiceToggle && voiceToggle.contains(e.target)) return;
+                clearPendingRetry();
+                if (!voiceEnabled || !queuedAudio) return;
+                isSpeaking = true;
+                updateVoiceUI(false);
+                queuedAudio.play().then(function() {
+                  // playing
+                }).catch(function() {
+                  isSpeaking = false;
+                  updateVoiceUI(false);
+                });
+              };
+              // Listen on every gesture type so ANY interaction triggers it
+              document.addEventListener('click', pendingRetry, true);
+              document.addEventListener('touchstart', pendingRetry, true);
+              document.addEventListener('touchend', pendingRetry, true);
+              document.addEventListener('scroll', pendingRetry, { once: true, passive: true });
+            }
 
           } catch (err) {
             console.error('Voice guide error:', err);
@@ -227,17 +292,16 @@
             currentAudio = null;
           }
           isSpeaking = false;
-          updateVoiceUI(false);
         }
 
         function toggleVoice() {
           voiceEnabled = !voiceEnabled;
           localStorage.setItem('ph-voice-guide', voiceEnabled ? 'true' : 'false');
-          localStorage.setItem('ph-voice-decided', 'true'); // Mark as decided
+          localStorage.setItem('ph-voice-decided', 'true');
+          clearPendingRetry();
           updateVoiceUI(false);
 
           if (voiceEnabled) {
-            // Speak page guidance directly - more useful than generic intro
             speakPageGuidance();
           } else {
             stopSpeaking();
@@ -246,9 +310,7 @@
 
         function speakPageGuidance() {
           if (!voiceEnabled) return;
-
-          // Look for page-specific voice guidance
-          const guidanceEl = document.getElementById('voiceGuidance');
+          var guidanceEl = document.getElementById('voiceGuidance');
           if (guidanceEl && guidanceEl.dataset.message) {
             speak(guidanceEl.dataset.message);
           }
@@ -261,12 +323,13 @@
           voiceToggle.addEventListener('click', toggleVoice);
         }
 
-        // Speak page guidance on load if voice is enabled
+        // Start voice IMMEDIATELY — no delay, fetch begins at page load
+        // Browser cache makes this instant on revisited pages
         if (voiceEnabled) {
-          setTimeout(speakPageGuidance, 800);
+          speakPageGuidance();
         }
 
-        // Make speak function globally available for page-specific triggers
+        // Make speak function globally available
         window.phSpeak = speak;
         window.phVoiceEnabled = function() { return voiceEnabled; };
         window.phStopSpeaking = stopSpeaking;

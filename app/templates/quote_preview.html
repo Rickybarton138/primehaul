@@ -3,11 +3,11 @@
 {% block content %}
   <!-- Voice guidance for this page -->
   {% if job.status == 'approved' %}
-  <div id="voiceGuidance" data-message="Great news! Your quote has been approved. You can see your final price on screen. When you're ready to book, tap Accept This Quote at the bottom." hidden></div>
+  <div id="voiceGuidance" data-message="Brilliant news! Your quote's been approved and you can see the final price on screen. When you're ready to book your move, just tap Accept This Quote at the bottom and we'll get everything sorted for you." hidden></div>
   {% elif job.status == 'awaiting_approval' %}
-  <div id="voiceGuidance" data-message="Your quote has been submitted and our team is reviewing it. We'll send you a text message when it's ready. You can close this page and come back later." hidden></div>
+  <div id="voiceGuidance" data-message="Your quote's been submitted and our team is having a look. We'll ping you a text as soon as it's ready. Feel free to close this page — we'll send you the link when it's approved." hidden></div>
   {% else %}
-  <div id="voiceGuidance" data-message="Here's your quote summary. You can see how many items we detected and the estimated price range. If you're happy, tap Submit for Review at the bottom. Our team will check it and get back to you shortly." hidden></div>
+  <div id="voiceGuidance" data-message="Here's your quote! You can see all the items we detected and the estimated price range. Have a look through the summary. If it looks good, tap Submit for Review at the bottom. Our team will check it over and get back to you, usually within a couple of hours." hidden></div>
   {% endif %}
 
   {% if job.status == 'approved' %}
