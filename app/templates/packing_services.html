@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <!-- Voice guidance for this page -->
+  <div id="voiceGuidance" data-message="Nearly there! Before we show you the quote, let's talk about packing. You can choose to use our packing materials - boxes, tape, paper, the lot - or bring your own. We can also pack everything for you room by room if you'd like to keep things stress-free. Make your choices and tap Continue!" hidden></div>
+
+  <div class="largetitle">Packing services</div>
+  <p class="subtitle">Choose your packing materials and optional professional packing</p>
+
+  <form id="packingForm" method="post" action="/s/{{ company_slug }}/{{ token }}/packing-services">
+
+    {% if has_packing_items %}
+    <!-- SECTION 1: Packing Materials -->
+    <div class="group">
+      <div style="font-weight:700; margin-bottom:12px;">Packing materials needed</div>
+
+      <div style="padding:14px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); margin-bottom:16px;">
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
+          {% if packing_materials.breakdown.small_boxes.qty > 0 %}
+          <div class="statrow">
+            <div style="flex:1; color:var(--muted);">Small boxes (18x18x10")</div>
+            <div style="font-weight:600;">{{ packing_materials.breakdown.small_boxes.qty }} boxes</div>
+          </div>
+          {% endif %}
+          {% if packing_materials.breakdown.medium_boxes.qty > 0 %}
+          <div class="statrow">
+            <div style="flex:1; color:var(--muted);">Medium boxes (18x18x20")</div>
+            <div style="font-weight:600;">{{ packing_materials.breakdown.medium_boxes.qty }} boxes</div>
+          </div>
+          {% endif %}
+          {% if packing_materials.breakdown.large_boxes.qty > 0 %}
+          <div class="statrow">
+            <div style="flex:1; color:var(--muted);">Large boxes (18x18x30")</div>
+            <div style="font-weight:600;">{{ packing_materials.breakdown.large_boxes.qty }} boxes</div>
+          </div>
+          {% endif %}
+          {% if packing_materials.breakdown.robe_cartons.qty > 0 %}
+          <div class="statrow">
+            <div style="flex:1; color:var(--muted);">Wardrobe cartons</div>
+            <div style="font-weight:600;">{{ packing_materials.breakdown.robe_cartons.qty }} cartons</div>
+          </div>
+          {% endif %}
+          {% if packing_materials.breakdown.mattress_covers.qty > 0 %}
+          <div class="statrow">
+            <div style="flex:1; color:var(--muted);">Mattress covers</div>
+            <div style="font-weight:600;">{{ packing_materials.breakdown.mattress_covers.qty }} covers</div>
+          </div>
+          {% endif %}
+          {% if packing_materials.breakdown.tape_rolls.qty > 0 or packing_materials.breakdown.paper_packs.qty > 0 %}
+          <div class="statrow">
+            <div style="flex:1; color:var(--muted);">Tape & packing paper</div>
+            <div style="font-weight:600;">{{ packing_materials.breakdown.tape_rolls.qty }} rolls, {{ "%.1f"|format(packing_materials.breakdown.paper_packs.qty) }} packs</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="radio-group">
+        <label class="radio-card">
+          <input type="radio" name="use_company_packing" value="yes" {% if not job.customer_provides_packing %}checked{% endif %} />
+          <div class="radio-card-content">
+            <div class="radio-card-icon">📦</div>
+            <div style="flex:1;">
+              <div class="radio-card-label">Use our packing materials</div>
+              <div style="font-size:13px; color:var(--muted); margin-top:2px;">We'll provide all boxes, tape, and paper (+£{{ "%.2f"|format(packing_materials.total_cost) }})</div>
+            </div>
+          </div>
+        </label>
+
+        <label class="radio-card">
+          <input type="radio" name="use_company_packing" value="no" {% if job.customer_provides_packing %}checked{% endif %} />
+          <div class="radio-card-content">
+            <div class="radio-card-icon">✋</div>
+            <div style="flex:1;">
+              <div class="radio-card-label">I'll provide my own</div>
+              <div style="font-size:13px; color:var(--muted); margin-top:2px;">No charge — bring the materials listed above</div>
+            </div>
+          </div>
+        </label>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if has_loose_rooms %}
+    <!-- SECTION 2: Professional Packing Service -->
+    <div class="group">
+      <div style="border-radius:14px; background:linear-gradient(135deg, rgba(46,229,157,.08), rgba(46,229,157,.03)); border:1px solid rgba(46,229,157,.3); animation:glowPulse 3s ease-in-out infinite; overflow:hidden;">
+        <!-- Header -->
+        <div style="padding:16px; display:flex; align-items:center; gap:12px; border-bottom:1px solid rgba(46,229,157,.15);">
+          <div style="width:44px; height:44px; border-radius:10px; background:rgba(46,229,157,.15); display:flex; align-items:center; justify-content:center; font-size:22px;">📦</div>
+          <div style="flex:1;">
+            <div style="font-weight:700; font-size:16px; color:#2ee59d;">Need help packing?</div>
+            <div style="font-size:13px; color:var(--muted);">We'll pack everything for you, room by room</div>
+          </div>
+        </div>
+
+        <!-- Room Selection -->
+        <div style="padding:12px 16px 16px;">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            {% for room in packing_service.rooms %}
+            <label style="display:flex; align-items:center; padding:12px 14px; border-radius:10px; background:{% if room.is_selected %}rgba(46,229,157,.12){% else %}rgba(255,255,255,.04){% endif %}; border:1px solid {% if room.is_selected %}rgba(46,229,157,.4){% else %}rgba(255,255,255,.08){% endif %}; cursor:pointer; transition:all 150ms ease;">
+              <input type="checkbox" name="room_ids" value="{{ room.room_id }}" {% if room.is_selected %}checked{% endif %} style="width:20px; height:20px; margin-right:12px; accent-color:#2ee59d;">
+              <div style="flex:1;">
+                <div style="font-weight:600;">{{ room.room_name }}</div>
+                <div style="font-size:12px; color:var(--muted);">{{ room.items_count }} items · ~{{ room.hours }}h</div>
+              </div>
+              <div style="font-weight:700; color:#2ee59d; font-size:15px;">+£{{ "%.0f"|format(room.cost) }}</div>
+            </label>
+            {% endfor %}
+          </div>
+          <div style="margin-top:12px; padding:10px 12px; border-radius:8px; background:rgba(46,229,157,.08); font-size:12px; color:rgba(46,229,157,.9); text-align:center;">
+            Professional packing service — all materials included
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </form>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer footer-clean">
+    <div class="footer-inner">
+      <button type="submit" form="packingForm" class="btn">Continue</button>
+      <a href="/s/{{ company_slug }}/{{ token }}/quote-preview" class="btn secondary" style="margin-top:10px; text-decoration:none; display:block; text-align:center;">
+        Skip
+      </a>
+    </div>
+  </div>
+{% endblock %}

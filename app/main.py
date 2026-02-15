@@ -2346,7 +2346,69 @@ def review_get(request: Request, company_slug: str, token: str, db: Session = De
 
 @app.post("/s/{company_slug}/{token}/review/finish")
 def review_finish(company_slug: str, token: str):
-    """Proceed to quote"""
+    """Proceed to packing services"""
+    return RedirectResponse(url=f"/s/{company_slug}/{token}/packing-services", status_code=303)
+
+
+@app.get("/s/{company_slug}/{token}/packing-services", response_class=HTMLResponse)
+def packing_services_get(request: Request, company_slug: str, token: str, db: Session = Depends(get_db)):
+    """Packing materials and professional packing service selection"""
+    company = request.state.company
+    job = get_or_create_job(company.id, token, db)
+
+    pricing = db.query(PricingConfig).filter(PricingConfig.company_id == company.id).first()
+    if not pricing:
+        return RedirectResponse(url=f"/s/{company_slug}/{token}/quote-preview", status_code=303)
+
+    # Temporarily force customer_provides_packing=False so costs are calculated
+    original_flag = job.customer_provides_packing
+    job.customer_provides_packing = False
+    packing_materials = calculate_packing_materials(job, pricing, db)
+    job.customer_provides_packing = original_flag
+
+    packing_service = calculate_packing_service(job, pricing, db)
+
+    has_packing_items = packing_materials["total_boxes"] > 0
+    has_loose_rooms = len(packing_service["rooms"]) > 0
+
+    # Skip page if nothing to show
+    if not has_packing_items and not has_loose_rooms:
+        return RedirectResponse(url=f"/s/{company_slug}/{token}/quote-preview", status_code=303)
+
+    return templates.TemplateResponse("packing_services.html", {
+        "request": request,
+        "token": token,
+        "company_slug": company_slug,
+        "branding": request.state.branding,
+        "title": f"Packing Services - {company.company_name}",
+        "nav_title": "Packing",
+        "back_url": f"/s/{company_slug}/{token}/review",
+        "progress": 95,
+        "job": job,
+        "packing_materials": packing_materials,
+        "packing_service": packing_service,
+        "has_packing_items": has_packing_items,
+        "has_loose_rooms": has_loose_rooms,
+    })
+
+
+@app.post("/s/{company_slug}/{token}/packing-services")
+def packing_services_post(
+    request: Request,
+    company_slug: str,
+    token: str,
+    use_company_packing: str = Form("yes"),
+    room_ids: list[str] = Form([]),
+    db: Session = Depends(get_db)
+):
+    """Save packing preferences and proceed to quote"""
+    company = request.state.company
+    job = get_or_create_job(company.id, token, db)
+
+    job.customer_provides_packing = (use_company_packing != "yes")
+    job.packing_service_rooms = room_ids if room_ids else []
+    db.commit()
+
     return RedirectResponse(url=f"/s/{company_slug}/{token}/quote-preview", status_code=303)
 
 
@@ -2749,7 +2811,7 @@ def quote_preview(request: Request, company_slug: str, token: str, db: Session =
         "branding": request.state.branding,
         "title": f"Your Quote - {company.company_name}",
         "nav_title": "Your Quote",
-        "back_url": f"/s/{company_slug}/{token}/rooms",
+        "back_url": f"/s/{company_slug}/{token}/packing-services",
         "progress": 100,
         "job": job,
         "estimate_low": quote["estimate_low"],
