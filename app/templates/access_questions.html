@@ -12,7 +12,7 @@
     <!-- PICKUP LOCATION SECTION -->
     <div class="group">
       <div class="section-header">
-        <div class="section-icon" style="background:rgba(255,255,255,.1);">
+        <div class="section-icon" style="background:var(--subtle-bg-strong);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
             <circle cx="12" cy="12" r="3"></circle>
@@ -39,7 +39,7 @@
         </div>
         <input type="hidden" id="pickup_floors" name="pickup_floors" value="{{ pickup_access.get('floors', 0) }}" required />
         <div id="pickup_floors_custom" class="custom-floor-input {% if pickup_access.get('floors', 0) < 4 %}is-hidden{% endif %}" style="margin-top:12px;">
-          <input type="number" id="pickup_floors_number" min="4" max="50" value="{{ pickup_access.get('floors', 4) if pickup_access.get('floors', 0) >= 4 else 4 }}" placeholder="Enter floor number" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:rgba(255,255,255,.04); color:var(--text); font-size:16px;" />
+          <input type="number" id="pickup_floors_number" min="4" max="50" value="{{ pickup_access.get('floors', 4) if pickup_access.get('floors', 0) >= 4 else 4 }}" placeholder="Enter floor number" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:var(--subtle-bg); color:var(--text); font-size:16px;" />
         </div>
       </div>
 
@@ -149,7 +149,7 @@
       <!-- OUTDOOR STEPS -->
       <div class="form-field {% if pickup_access.get('outdoor_access') != 'steps' %}is-hidden{% endif %}" id="pickup_outdoor_steps_field">
         <label for="pickup_outdoor_steps" class="form-label">How many outdoor steps?</label>
-        <input type="number" id="pickup_outdoor_steps" name="pickup_outdoor_steps" min="0" max="50" value="{{ pickup_access.get('outdoor_steps', 0) }}" placeholder="e.g. 5" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:rgba(255,255,255,.04); color:var(--text); font-size:16px;" />
+        <input type="number" id="pickup_outdoor_steps" name="pickup_outdoor_steps" min="0" max="50" value="{{ pickup_access.get('outdoor_steps', 0) }}" placeholder="e.g. 5" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:var(--subtle-bg); color:var(--text); font-size:16px;" />
       </div>
 
       <!-- NOTES -->
@@ -158,14 +158,14 @@
           <span>Additional notes (optional)</span>
           <span class="form-label-hint">Any special access considerations?</span>
         </label>
-        <textarea id="pickup_notes" name="pickup_notes" rows="3" placeholder="e.g. Need to book lift, narrow Victorian stairs, etc." style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:rgba(255,255,255,.04); color:var(--text); font-size:15px; font-family:inherit; resize:vertical;">{{ pickup_access.get('notes', '') }}</textarea>
+        <textarea id="pickup_notes" name="pickup_notes" rows="3" placeholder="e.g. Need to book lift, narrow Victorian stairs, etc." style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:var(--subtle-bg); color:var(--text); font-size:15px; font-family:inherit; resize:vertical;">{{ pickup_access.get('notes', '') }}</textarea>
       </div>
     </div>
 
     <!-- DROPOFF LOCATION SECTION -->
     <div class="group" style="margin-top:24px;">
       <div class="section-header">
-        <div class="section-icon" style="background:rgba(255,255,255,.1);">
+        <div class="section-icon" style="background:var(--subtle-bg-strong);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
             <circle cx="12" cy="10" r="3"></circle>
@@ -178,7 +178,7 @@
       </div>
 
       <!-- COPY BUTTON -->
-      <div class="hint" style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,.05); border-radius:10px; border:1px solid rgba(255,255,255,.1);">
+      <div class="hint" style="margin-bottom:16px; padding:12px; background:var(--subtle-bg); border-radius:10px; border:1px solid var(--subtle-border);">
         <button type="button" id="copyPickupBtn" class="btn secondary" style="width:100%; margin:0; display:flex; align-items:center; justify-content:center; gap:8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -203,7 +203,7 @@
         </div>
         <input type="hidden" id="dropoff_floors" name="dropoff_floors" value="{{ dropoff_access.get('floors', 0) }}" required />
         <div id="dropoff_floors_custom" class="custom-floor-input {% if dropoff_access.get('floors', 0) < 4 %}is-hidden{% endif %}" style="margin-top:12px;">
-          <input type="number" id="dropoff_floors_number" min="4" max="50" value="{{ dropoff_access.get('floors', 4) if dropoff_access.get('floors', 0) >= 4 else 4 }}" placeholder="Enter floor number" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:rgba(255,255,255,.04); color:var(--text); font-size:16px;" />
+          <input type="number" id="dropoff_floors_number" min="4" max="50" value="{{ dropoff_access.get('floors', 4) if dropoff_access.get('floors', 0) >= 4 else 4 }}" placeholder="Enter floor number" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:var(--subtle-bg); color:var(--text); font-size:16px;" />
         </div>
       </div>
 
@@ -313,7 +313,7 @@
       <!-- OUTDOOR STEPS (DROPOFF) -->
       <div class="form-field {% if dropoff_access.get('outdoor_access') != 'steps' %}is-hidden{% endif %}" id="dropoff_outdoor_steps_field">
         <label for="dropoff_outdoor_steps" class="form-label">How many outdoor steps?</label>
-        <input type="number" id="dropoff_outdoor_steps" name="dropoff_outdoor_steps" min="0" max="50" value="{{ dropoff_access.get('outdoor_steps', 0) }}" placeholder="e.g. 5" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:rgba(255,255,255,.04); color:var(--text); font-size:16px;" />
+        <input type="number" id="dropoff_outdoor_steps" name="dropoff_outdoor_steps" min="0" max="50" value="{{ dropoff_access.get('outdoor_steps', 0) }}" placeholder="e.g. 5" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:var(--subtle-bg); color:var(--text); font-size:16px;" />
       </div>
 
       <!-- NOTES (DROPOFF) -->
@@ -322,7 +322,7 @@
           <span>Additional notes (optional)</span>
           <span class="form-label-hint">Any special access considerations?</span>
         </label>
-        <textarea id="dropoff_notes" name="dropoff_notes" rows="3" placeholder="e.g. Need to book lift, narrow Victorian stairs, etc." style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:rgba(255,255,255,.04); color:var(--text); font-size:15px; font-family:inherit; resize:vertical;">{{ dropoff_access.get('notes', '') }}</textarea>
+        <textarea id="dropoff_notes" name="dropoff_notes" rows="3" placeholder="e.g. Need to book lift, narrow Victorian stairs, etc." style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--hair); background:var(--subtle-bg); color:var(--text); font-size:15px; font-family:inherit; resize:vertical;">{{ dropoff_access.get('notes', '') }}</textarea>
       </div>
     </div>
 
@@ -540,7 +540,7 @@
       margin: 0;
       padding-left: 18px;
       font-size: 13px;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--muted);
     }
     .validation-error-list li {
       margin-bottom: 4px;
