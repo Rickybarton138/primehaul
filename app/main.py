@@ -4312,6 +4312,66 @@ def create_deposit_payment(
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.post("/s/{company_slug}/{token}/create-checkout-session")
+def create_checkout_session_deposit(
+    request: Request,
+    company_slug: str,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Create a Stripe Checkout session for deposit payment"""
+    company = request.state.company
+    job = get_or_create_job(company.id, token, db)
+
+    if job.status != 'approved':
+        return RedirectResponse(url=f"/s/{company_slug}/{token}/deposit?error=not_approved", status_code=303)
+
+    if not company.stripe_connect_account_id or not company.stripe_connect_onboarding_complete:
+        return RedirectResponse(url=f"/s/{company_slug}/{token}/deposit?error=payments_not_setup", status_code=303)
+
+    quote = calculate_quote(job, db)
+    deposit_amount_pence = int(quote["estimate_low"] * 0.20 * 100)
+
+    app_url = os.getenv("APP_URL", "https://primehaul.co.uk")
+
+    try:
+        import stripe
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "gbp",
+                    "unit_amount": deposit_amount_pence,
+                    "product_data": {
+                        "name": f"Moving Deposit - {company.company_name}",
+                        "description": f"20% deposit to secure your move",
+                    },
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=f"{app_url}/s/{company_slug}/{token}/booking-confirmed",
+            cancel_url=f"{app_url}/s/{company_slug}/{token}/deposit",
+            payment_intent_data={
+                "transfer_data": {
+                    "destination": company.stripe_connect_account_id,
+                },
+            },
+            customer_email=job.customer_email or None,
+            metadata={
+                "job_token": token,
+                "company_id": str(company.id),
+                "type": "deposit",
+            },
+        )
+
+        return RedirectResponse(url=session.url, status_code=303)
+
+    except Exception as e:
+        logger.error(f"Error creating checkout session: {str(e)}")
+        return RedirectResponse(url=f"/s/{company_slug}/{token}/deposit?error=payment_failed", status_code=303)
+
+
 # ============================================================================
 # BRANDING & CUSTOMIZATION ENDPOINTS
 # ============================================================================
