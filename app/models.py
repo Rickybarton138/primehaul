@@ -58,6 +58,13 @@ class Company(Base):
     tcs_document_hash = Column(String(64))  # SHA-256 hash of current document
     tcs_enabled = Column(Boolean, default=False)  # Whether T&Cs required for this company
 
+    # Custom SMTP (per-company email sending)
+    smtp_host = Column(String(255))  # e.g. smtp.gmail.com
+    smtp_port = Column(Integer)  # e.g. 587
+    smtp_username = Column(String(255))  # e.g. info@smithremovals.co.uk
+    smtp_password = Column(String(500))  # App password or SMTP password
+    smtp_from_email = Column(String(255))  # From address (defaults to smtp_username)
+
     # Status
     is_active = Column(Boolean, default=True)
     onboarding_completed = Column(Boolean, default=False)

@@ -37,7 +37,10 @@ def send_email(
     to_email: str,
     subject: str,
     html_body: str,
-    text_body: Optional[str] = None
+    text_body: Optional[str] = None,
+    from_name: Optional[str] = None,
+    reply_to: Optional[str] = None,
+    smtp_config: Optional[dict] = None
 ) -> bool:
     """
     Send an email using SMTP
@@ -47,11 +50,29 @@ def send_email(
         subject: Email subject line
         html_body: HTML version of email
         text_body: Plain text version (optional)
+        from_name: Custom from display name (e.g. "Smith Removals via PrimeHaul")
+        reply_to: Reply-to email address (e.g. company's own email)
+        smtp_config: Optional per-company SMTP config dict with keys:
+                     host, port, username, password, from_email.
+                     Falls back to default PrimeHaul SMTP if not provided.
 
     Returns:
         True if sent successfully, False otherwise
     """
-    config = get_smtp_config()
+    # Use company SMTP if provided, otherwise fall back to default
+    if smtp_config and smtp_config.get("username") and smtp_config.get("password"):
+        config = {
+            "host": smtp_config["host"],
+            "port": int(smtp_config.get("port", 587)),
+            "username": smtp_config["username"],
+            "password": smtp_config["password"],
+            "from_email": smtp_config.get("from_email") or smtp_config["username"],
+            "from_name": from_name or smtp_config.get("from_name", "")
+        }
+        using_company_smtp = True
+    else:
+        config = get_smtp_config()
+        using_company_smtp = False
 
     # Skip if SMTP not configured (development mode)
     if not config["username"] or not config["password"]:
@@ -62,8 +83,16 @@ def send_email(
         # Create message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = f"{config['from_name']} <{config['from_email']}>"
+        display_name = from_name or config.get('from_name', '')
+        from_email = config['from_email']
+        if display_name:
+            msg['From'] = f"{display_name} <{from_email}>"
+        else:
+            msg['From'] = from_email
         msg['To'] = to_email
+        # Only set Reply-To if using PrimeHaul SMTP with a company reply-to
+        if reply_to and not using_company_smtp:
+            msg['Reply-To'] = reply_to
 
         # Add plain text version
         if text_body:
@@ -80,7 +109,8 @@ def send_email(
             server.login(config['username'], config['password'])
             server.send_message(msg)
 
-        print(f"[EMAIL SENT] To: {to_email}, Subject: {subject}")
+        source = "company SMTP" if using_company_smtp else "PrimeHaul SMTP"
+        print(f"[EMAIL SENT via {source}] To: {to_email}, Subject: {subject}")
         return True
 
     except Exception as e:
@@ -864,3 +894,156 @@ This takes less than 5 minutes.
     """
 
     return send_email(customer_email, subject, html_body, text_body)
+
+
+# ==========================================
+# QUOTE APPROVED NOTIFICATION
+# ==========================================
+
+def send_quote_approved_email(
+    customer_email: str,
+    customer_name: str,
+    company_name: str,
+    final_price: int,
+    quote_url: str,
+    pickup_label: str = "",
+    dropoff_label: str = "",
+    company_phone: str = "",
+    company_email: str = "",
+    smtp_config: Optional[dict] = None
+) -> bool:
+    """
+    Send email to customer when their quote has been approved.
+
+    Args:
+        customer_email: Customer's email address
+        customer_name: Customer's name
+        company_name: Name of the removal company
+        final_price: Approved final price in pounds
+        quote_url: URL to view/accept the quote
+        pickup_label: Collection address label (optional)
+        dropoff_label: Delivery address label (optional)
+        company_phone: Company phone number (optional)
+        company_email: Company email for reply-to (optional)
+
+    Returns:
+        True if sent successfully
+    """
+    greeting = f"Hi {customer_name}," if customer_name else "Hi there,"
+    price_formatted = format_currency(final_price)
+
+    # Build move summary section if addresses available
+    move_summary_html = ""
+    if pickup_label or dropoff_label:
+        move_summary_html = f"""
+                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0; color: #333;">Move Summary</h3>
+                    {'<p style="margin: 8px 0;"><strong>Collection:</strong> ' + pickup_label + '</p>' if pickup_label else ''}
+                    {'<p style="margin: 8px 0;"><strong>Delivery:</strong> ' + dropoff_label + '</p>' if dropoff_label else ''}
+                </div>"""
+
+    subject = f"Your Quote is Ready — {price_formatted} from {company_name}"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(135deg, #2ee59d 0%, #26c785 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 24px; }}
+            .header p {{ margin: 10px 0 0 0; opacity: 0.9; }}
+            .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 12px 12px; }}
+            .price-card {{ background: white; padding: 30px; border-radius: 10px; margin: 25px 0; text-align: center; border: 2px solid #2ee59d; }}
+            .price {{ font-size: 42px; font-weight: bold; color: #2ee59d; margin: 10px 0; }}
+            .price-label {{ color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }}
+            .cta-button {{ display: inline-block; background: #2ee59d; color: white; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 18px; margin: 25px 0; }}
+            .cta-button:hover {{ background: #26c785; }}
+            .info-box {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }}
+            .company-info {{ background: white; padding: 20px; border-radius: 10px; margin: 25px 0; text-align: center; }}
+            .footer {{ text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Your Quote is Ready</h1>
+                <p>From {company_name}</p>
+            </div>
+
+            <div class="content">
+                <p style="font-size: 17px;">{greeting}</p>
+
+                <p style="font-size: 17px;">
+                    Great news! <strong>{company_name}</strong> has reviewed your move details and prepared a fixed-price quote for you.
+                </p>
+
+                <div class="price-card">
+                    <div class="price-label">Your Approved Quote</div>
+                    <div class="price">{price_formatted}</div>
+                    <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Fixed price — no hidden fees</p>
+                </div>
+
+                {move_summary_html}
+
+                <center>
+                    <a href="{quote_url}" class="cta-button">
+                        View Quote & Book →
+                    </a>
+                    <p style="color: #888; font-size: 13px; margin-top: 10px;">Click to view full details and confirm your booking</p>
+                </center>
+
+                <div class="info-box">
+                    <strong>What happens next?</strong><br>
+                    Click the button above to review your quote. If you're happy, you can confirm your booking and choose a move date — all online, no phone calls needed.
+                </div>
+
+                <div class="company-info">
+                    <p style="margin: 0; color: #666;">This quote is provided by</p>
+                    <p style="margin: 8px 0; font-size: 20px; font-weight: 700; color: #333;">{company_name}</p>
+                    {f'<p style="margin: 0; color: #666;">{company_phone}</p>' if company_phone else ''}
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>{company_name}</p>
+                <p style="color: #bbb; font-size: 11px;">Powered by PrimeHaul — AI-powered removal quotes</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+    text_body = f"""{greeting}
+
+Great news! {company_name} has reviewed your move details and prepared a fixed-price quote for you.
+
+YOUR APPROVED QUOTE: {price_formatted}
+Fixed price — no hidden fees.
+
+{f"Collection: {pickup_label}" if pickup_label else ""}
+{f"Delivery: {dropoff_label}" if dropoff_label else ""}
+
+VIEW QUOTE & BOOK: {quote_url}
+
+Click the link above to review your quote and confirm your booking.
+
+{company_name}
+{company_phone or ''}
+    """
+
+    # If company has their own SMTP, send directly from them
+    # Otherwise use PrimeHaul SMTP with "Company via PrimeHaul" branding
+    if smtp_config:
+        return send_email(
+            customer_email, subject, html_body, text_body,
+            from_name=company_name,
+            smtp_config=smtp_config
+        )
+    else:
+        return send_email(
+            customer_email, subject, html_body, text_body,
+            from_name=f"{company_name} via PrimeHaul",
+            reply_to=company_email or None
+        )

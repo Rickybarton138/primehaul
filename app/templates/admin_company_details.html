@@ -103,6 +103,148 @@
             </form>
         </div>
 
+        <!-- Email Settings (SMTP) -->
+        <div class="card fade-in" style="margin-top: 32px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2>Email Settings</h2>
+            </div>
+
+            <p style="color: #999; margin-bottom: 20px; font-size: 14px; line-height: 1.6;">
+                Set up your own email so quote notifications come directly from your company email address (e.g. <strong>info@yourcompany.co.uk</strong>) instead of PrimeHaul.
+            </p>
+
+            {% if smtp_success %}
+            <div class="alert" style="background: rgba(46, 229, 157, 0.1); border-left: 4px solid #2ee59d; margin-bottom: 24px;">
+                <p style="margin: 0; color: #2ee59d;">
+                    ✓ Email settings saved successfully
+                </p>
+            </div>
+            {% endif %}
+
+            {% if smtp_error %}
+            <div class="alert" style="background: rgba(255, 80, 80, 0.1); border-left: 4px solid #ff5050; margin-bottom: 24px;">
+                <p style="margin: 0; color: #ff5050;">{{ smtp_error }}</p>
+            </div>
+            {% endif %}
+
+            {% if smtp_test_success %}
+            <div class="alert" style="background: rgba(46, 229, 157, 0.1); border-left: 4px solid #2ee59d; margin-bottom: 24px;">
+                <p style="margin: 0; color: #2ee59d;">
+                    ✓ Test email sent! Check your inbox.
+                </p>
+            </div>
+            {% endif %}
+
+            {% if smtp_test_error %}
+            <div class="alert" style="background: rgba(255, 80, 80, 0.1); border-left: 4px solid #ff5050; margin-bottom: 24px;">
+                <p style="margin: 0; color: #ff5050;">{{ smtp_test_error }}</p>
+            </div>
+            {% endif %}
+
+            {% if company.smtp_host and company.smtp_username %}
+            <div style="background: rgba(46, 229, 157, 0.1); border: 1px solid rgba(46, 229, 157, 0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px;">
+                <span style="color: #2ee59d; font-size: 18px;">&#10003;</span>
+                <span style="color: #2ee59d; font-size: 14px;">Emails will be sent from <strong>{{ company.smtp_from_email or company.smtp_username }}</strong></span>
+            </div>
+            {% else %}
+            <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px;">
+                <span style="color: #ffc107; font-size: 18px;">&#9888;</span>
+                <span style="color: #ccc; font-size: 14px;">Not configured — emails are sent as <em>"{{ company.company_name }} via PrimeHaul"</em></span>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/{{ company_slug }}/admin/company-details/smtp" class="form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                    <div class="form-group">
+                        <label for="smtp_host" style="display: block; margin-bottom: 8px; font-weight: 600; color: #ccc;">SMTP Server</label>
+                        <input
+                            type="text"
+                            id="smtp_host"
+                            name="smtp_host"
+                            value="{{ company.smtp_host or '' }}"
+                            placeholder="smtp.gmail.com"
+                            style="width: 100%; padding: 12px; background: #222; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 15px;"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="smtp_port" style="display: block; margin-bottom: 8px; font-weight: 600; color: #ccc;">Port</label>
+                        <input
+                            type="number"
+                            id="smtp_port"
+                            name="smtp_port"
+                            value="{{ company.smtp_port or 587 }}"
+                            placeholder="587"
+                            style="width: 100%; padding: 12px; background: #222; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 15px;"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label for="smtp_username" style="display: block; margin-bottom: 8px; font-weight: 600; color: #ccc;">Email / Username</label>
+                    <input
+                        type="text"
+                        id="smtp_username"
+                        name="smtp_username"
+                        value="{{ company.smtp_username or '' }}"
+                        placeholder="info@yourcompany.co.uk"
+                        style="width: 100%; padding: 12px; background: #222; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 15px;"
+                    >
+                </div>
+
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label for="smtp_password" style="display: block; margin-bottom: 8px; font-weight: 600; color: #ccc;">Password / App Password</label>
+                    <input
+                        type="password"
+                        id="smtp_password"
+                        name="smtp_password"
+                        value="{{ company.smtp_password or '' }}"
+                        placeholder="{{ '••••••••' if company.smtp_password else 'Enter your email password or app password' }}"
+                        style="width: 100%; padding: 12px; background: #222; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 15px;"
+                    >
+                    <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
+                        For Gmail, use an <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: #2ee59d;">App Password</a> (not your regular password)
+                    </small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 32px;">
+                    <label for="smtp_from_email" style="display: block; margin-bottom: 8px; font-weight: 600; color: #ccc;">From Email (optional)</label>
+                    <input
+                        type="email"
+                        id="smtp_from_email"
+                        name="smtp_from_email"
+                        value="{{ company.smtp_from_email or '' }}"
+                        placeholder="Leave blank to use the email above"
+                        style="width: 100%; padding: 12px; background: #222; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 15px;"
+                    >
+                    <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
+                        Only needed if your "From" address differs from your login email
+                    </small>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1; padding: 14px; font-size: 16px; font-weight: 700;">
+                        Save Email Settings
+                    </button>
+                    {% if company.smtp_host and company.smtp_username and company.smtp_password %}
+                    <button type="submit" formaction="/{{ company_slug }}/admin/company-details/smtp-test" class="btn" style="background: #333; color: #fff; padding: 14px 24px; font-size: 14px; border: 1px solid #555; cursor: pointer;">
+                        Send Test Email
+                    </button>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Common SMTP presets -->
+            <details style="margin-top: 24px;">
+                <summary style="color: #888; cursor: pointer; font-size: 13px;">Common email provider settings</summary>
+                <div style="margin-top: 12px; padding: 16px; background: #1a1a1a; border-radius: 8px; font-size: 13px; color: #999; line-height: 2;">
+                    <strong style="color: #ccc;">Gmail:</strong> smtp.gmail.com, Port 587 — requires <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: #2ee59d;">App Password</a><br>
+                    <strong style="color: #ccc;">Outlook/Hotmail:</strong> smtp-mail.outlook.com, Port 587<br>
+                    <strong style="color: #ccc;">Yahoo:</strong> smtp.mail.yahoo.com, Port 587<br>
+                    <strong style="color: #ccc;">Zoho:</strong> smtp.zoho.eu, Port 587
+                </div>
+            </details>
+        </div>
+
         <div style="text-align: center; margin-top: 32px; color: #666; font-size: 13px;">
             <p>&copy; 2026 PrimeHaul — An intelligent move.</p>
         </div>

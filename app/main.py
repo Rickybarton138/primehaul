@@ -3772,6 +3772,36 @@ def admin_approve_job(
             except Exception as e:
                 logger.error(f"Failed to send approval SMS: {e}")
 
+        # Send email notification to customer with approved quote
+        if job.customer_email:
+            try:
+                from app.notifications import send_quote_approved_email
+                booking_url = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'localhost:8000')}/s/{company_slug}/{token}/booking"
+                # Use company's own SMTP if configured
+                company_smtp = None
+                if company.smtp_host and company.smtp_username and company.smtp_password:
+                    company_smtp = {
+                        "host": company.smtp_host,
+                        "port": company.smtp_port or 587,
+                        "username": company.smtp_username,
+                        "password": company.smtp_password,
+                        "from_email": company.smtp_from_email or company.smtp_username,
+                    }
+                send_quote_approved_email(
+                    customer_email=job.customer_email,
+                    customer_name=job.customer_name or "",
+                    company_name=company.company_name,
+                    final_price=final_price,
+                    quote_url=booking_url,
+                    pickup_label=(job.pickup or {}).get("label", ""),
+                    dropoff_label=(job.dropoff or {}).get("label", ""),
+                    company_phone=company.phone or "",
+                    company_email=company.email or "",
+                    smtp_config=company_smtp
+                )
+            except Exception as e:
+                logger.error(f"Failed to send approval email: {e}")
+
     return RedirectResponse(url=f"/{company_slug}/admin/dashboard", status_code=303)
 
 
@@ -3910,11 +3940,11 @@ def admin_quick_approve(
         db.commit()
         logger.info(f"Job {token} quick-approved by {current_user.email} at £{final_price}")
 
+        booking_url = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'localhost:8000')}/s/{company_slug}/{token}/booking"
+
         # Send SMS notification to customer with final price
         if job.customer_phone and job.customer_name:
             try:
-                booking_url = f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'localhost:8000')}/s/{company_slug}/{token}/booking"
-
                 notify_quote_approved(
                     customer_name=job.customer_name,
                     customer_phone=job.customer_phone,
@@ -3926,6 +3956,35 @@ def admin_quick_approve(
                 logger.info(f"SMS sent to customer for quick-approved job {token}")
             except Exception as e:
                 logger.error(f"Failed to send quick-approve SMS for job {token}: {e}")
+
+        # Send email notification to customer with approved quote
+        if job.customer_email:
+            try:
+                from app.notifications import send_quote_approved_email
+                # Use company's own SMTP if configured
+                company_smtp = None
+                if company.smtp_host and company.smtp_username and company.smtp_password:
+                    company_smtp = {
+                        "host": company.smtp_host,
+                        "port": company.smtp_port or 587,
+                        "username": company.smtp_username,
+                        "password": company.smtp_password,
+                        "from_email": company.smtp_from_email or company.smtp_username,
+                    }
+                send_quote_approved_email(
+                    customer_email=job.customer_email,
+                    customer_name=job.customer_name or "",
+                    company_name=company.company_name,
+                    final_price=final_price,
+                    quote_url=booking_url,
+                    pickup_label=(job.pickup or {}).get("label", ""),
+                    dropoff_label=(job.dropoff or {}).get("label", ""),
+                    company_phone=company.phone or "",
+                    company_email=company.email or "",
+                    smtp_config=company_smtp
+                )
+            except Exception as e:
+                logger.error(f"Failed to send quick-approve email for job {token}: {e}")
 
         return JSONResponse({"success": True, "final_price": final_price})
 
@@ -4513,6 +4572,10 @@ def company_details_settings(
     company_slug: str,
     success: Optional[str] = None,
     error: Optional[str] = None,
+    smtp_success: Optional[str] = None,
+    smtp_error: Optional[str] = None,
+    smtp_test_success: Optional[str] = None,
+    smtp_test_error: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -4525,7 +4588,11 @@ def company_details_settings(
         "company": company,
         "company_slug": company_slug,
         "success": success,
-        "error": error
+        "error": error,
+        "smtp_success": smtp_success,
+        "smtp_error": smtp_error,
+        "smtp_test_success": smtp_test_success,
+        "smtp_test_error": smtp_test_error
     })
 
 
@@ -4588,6 +4655,123 @@ def update_company_details(
         url=f"/{company_slug}/admin/company-details?success=true",
         status_code=303
     )
+
+
+@app.post("/{company_slug}/admin/company-details/smtp")
+def update_smtp_settings(
+    company_slug: str,
+    smtp_host: Optional[str] = Form(None),
+    smtp_port: Optional[int] = Form(587),
+    smtp_username: Optional[str] = Form(None),
+    smtp_password: Optional[str] = Form(None),
+    smtp_from_email: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Save company SMTP email settings"""
+    company = verify_company_access(company_slug, current_user)
+
+    # Allow clearing SMTP settings (all empty = remove config)
+    host = (smtp_host or "").strip()
+    username = (smtp_username or "").strip()
+    password = (smtp_password or "").strip()
+    from_email = (smtp_from_email or "").strip()
+
+    if host or username or password:
+        # If partially filled, require host + username + password
+        if not host or not username or not password:
+            return RedirectResponse(
+                url=f"/{company_slug}/admin/company-details?smtp_error=Please fill in SMTP server, email, and password.",
+                status_code=303
+            )
+
+    company.smtp_host = host or None
+    company.smtp_port = smtp_port or 587
+    company.smtp_username = username or None
+    company.smtp_password = password or None
+    company.smtp_from_email = from_email or None
+    db.commit()
+
+    if host:
+        logger.info(f"SMTP settings updated for {company.slug} by {current_user.email}: {host}")
+    else:
+        logger.info(f"SMTP settings cleared for {company.slug} by {current_user.email}")
+
+    return RedirectResponse(
+        url=f"/{company_slug}/admin/company-details?smtp_success=true",
+        status_code=303
+    )
+
+
+@app.post("/{company_slug}/admin/company-details/smtp-test")
+def test_smtp_settings(
+    company_slug: str,
+    smtp_host: Optional[str] = Form(None),
+    smtp_port: Optional[int] = Form(587),
+    smtp_username: Optional[str] = Form(None),
+    smtp_password: Optional[str] = Form(None),
+    smtp_from_email: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send a test email using the company's SMTP settings"""
+    company = verify_company_access(company_slug, current_user)
+
+    host = (smtp_host or "").strip()
+    username = (smtp_username or "").strip()
+    password = (smtp_password or "").strip()
+    from_email = (smtp_from_email or "").strip()
+
+    if not host or not username or not password:
+        return RedirectResponse(
+            url=f"/{company_slug}/admin/company-details?smtp_test_error=Please fill in all SMTP fields before testing.",
+            status_code=303
+        )
+
+    # Save settings first
+    company.smtp_host = host
+    company.smtp_port = smtp_port or 587
+    company.smtp_username = username
+    company.smtp_password = password
+    company.smtp_from_email = from_email or None
+    db.commit()
+
+    # Send test email
+    from app.notifications import send_email
+    test_smtp = {
+        "host": host,
+        "port": smtp_port or 587,
+        "username": username,
+        "password": password,
+        "from_email": from_email or username,
+    }
+
+    success = send_email(
+        to_email=company.email,
+        subject=f"Test Email from {company.company_name}",
+        html_body=f"""
+        <div style="font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 30px; background: #f9f9f9; border-radius: 12px; text-align: center;">
+            <h2 style="color: #2ee59d;">Email is working!</h2>
+            <p style="color: #666;">This test email was sent from your own SMTP settings.</p>
+            <p style="color: #333; font-weight: 600;">{company.company_name}</p>
+            <p style="color: #999; font-size: 12px;">Sent via {host}</p>
+        </div>
+        """,
+        from_name=company.company_name,
+        smtp_config=test_smtp
+    )
+
+    if success:
+        logger.info(f"SMTP test email sent for {company.slug} via {host}")
+        return RedirectResponse(
+            url=f"/{company_slug}/admin/company-details?smtp_test_success=true",
+            status_code=303
+        )
+    else:
+        return RedirectResponse(
+            url=f"/{company_slug}/admin/company-details?smtp_test_error=Failed to send test email. Check your SMTP settings and password.",
+            status_code=303
+        )
 
 
 # ============================================================================
