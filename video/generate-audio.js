@@ -7,31 +7,23 @@ const VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"; // George — British male, turbo v2.5
 const scenes = [
   {
     file: "s1.mp3",
-    text: "PrimeHaul. Stop quoting blind. Start quoting smart.",
+    text: "PrimeHaul. Your AI surveyor.",
   },
   {
     file: "s2.mp3",
-    text: "You're driving across town for site visits that go nowhere. By the time you send a quote, the customer's already booked someone else.",
+    text: "Customers ghost you. Site visits waste hours. There's a better way.",
   },
   {
     file: "s3.mp3",
-    text: "With PrimeHaul, you send a link. Your customer drops a pin, snaps a few photos room by room, and that's it. Five minutes, done.",
+    text: "Your customer snaps photos. AI detects every item instantly.",
   },
   {
     file: "s4.mp3",
-    text: "Our AI scans every photo and identifies each item. Sofas, wardrobes, boxes. It calculates the exact volume and weight. No guesswork.",
+    text: "You approve from your phone. Done in thirty seconds.",
   },
   {
     file: "s5.mp3",
-    text: "The survey lands on your dashboard with the full inventory. Set your price, hit approve, and your customer gets the quote instantly. They pay a deposit through Stripe. Job locked in.",
-  },
-  {
-    file: "s6.mp3",
-    text: "Quote ten times faster. Win thirty percent more jobs. Zero wasted site visits.",
-  },
-  {
-    file: "s7.mp3",
-    text: "Try it free today. PrimeHaul dot co dot UK.",
+    text: "Ten times faster. Thirty percent more jobs. Try it free at primehaul dot co dot UK.",
   },
 ];
 
