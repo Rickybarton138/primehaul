@@ -76,6 +76,62 @@ The platform is fully deployed at **primehaul.co.uk** — security-hardened, per
 
 ---
 
+## Session Log: 24 February 2026 (Continued)
+
+### Video Shortened Again — 59s → 30s, Full Polish
+
+**Goal:** Cut video from 59s to ~30s for social media. Hook in first 2 seconds. Make it punchy.
+
+**New Structure — 5 Scenes (was 7):**
+
+| # | Scene | Duration | Voiceover |
+|---|-------|----------|-----------|
+| 1 | **Hook** | 3.0s | "PrimeHaul. Your AI surveyor." |
+| 2 | **Problem → Flip** | 5.5s | "Customers ghost you. Site visits waste hours. There's a better way." |
+| 3 | **The Magic** | 8.0s | "Your customer snaps photos. AI detects every item instantly." |
+| 4 | **Boss Approve** | 6.0s | "You approve from your phone. Done in thirty seconds." |
+| 5 | **Results + CTA** | 8.0s | "Ten times faster. Thirty percent more jobs. Try it free at primehaul.co.uk." |
+
+**Total: 30.5 seconds (915 frames @ 30fps)**
+
+**What Changed:**
+- **Scene 1:** Logo slam with shockwave ring + impact flash. "Your AI Surveyor" subtitle. No slow fade.
+- **Scene 2:** 3 pain cards appear near-simultaneously (3-frame stagger), red ambient glow, green wipe sweeps across, "There's a better way." lands.
+- **Scene 3:** Merged old Scenes 3+4. Phone shows room-by-room photos with camera flash effects → crossfades to AI scan line sweeping down → items detected with volume labels. Side stats panel.
+- **Scene 4:** Stripped-down dashboard. Notification banner with shake → price card → breathing approve button → green success flash → "QUOTE SENT". Cut inventory tags, Stripe deposit, price editing.
+- **Scene 5:** Merged old Scenes 6+7. Fast stat counters (10x, 30%, 0) with impact shake → logo with spinning ring → "Try It Free" button with breathing glow → "Try it free at primehaul.co.uk" typewriter. Cut "Built by djam.ai".
+- **Transitions:** 5 frames (~0.17s) — basically hard cuts between scenes.
+- All voiceovers regenerated via ElevenLabs (George voice, turbo v2.5).
+
+**Files Changed:**
+- `video/generate-audio.js` — 5 new short scripts
+- `video/public/s1-s5.mp3` — Regenerated audio
+- `video/public/s6.mp3`, `video/public/s7.mp3` — Deleted
+- `video/src/helpers/timing.ts` — 5 scenes, 915 frames, TRANS=5
+- `video/src/scenes/Scene1Intro.tsx` — Rewritten (impact hook)
+- `video/src/scenes/Scene2Problem.tsx` — Rewritten (fast cards + flip)
+- `video/src/scenes/Scene3CustomerFlow.tsx` — Rewritten (merged with AI magic)
+- `video/src/scenes/Scene4BossApprove.tsx` — New file (stripped dashboard)
+- `video/src/scenes/Scene5ResultsCTA.tsx` — New file (merged results + CTA)
+- `video/src/scenes/Scene4AImagic.tsx` — Deleted (merged into Scene3)
+- `video/src/scenes/Scene5BossDashboard.tsx` — Deleted (replaced by Scene4BossApprove)
+- `video/src/scenes/Scene6Results.tsx` — Deleted (merged into Scene5)
+- `video/src/scenes/Scene7CTA.tsx` — Deleted (merged into Scene5)
+- `video/src/PrimeHaulDemo.tsx` — Updated to 5 scenes
+
+**Renders (all 3 formats on Desktop):**
+- `primehaul-demo.mp4` — 1920x1080, 3.7 MB
+- `primehaul-tiktok.mp4` — 1080x1920, 3.8 MB
+- `primehaul-square.mp4` — 1080x1080, 3.5 MB
+
+### Commits
+
+```
+c215eef Shorten video from 59s to 30s with polished 5-scene structure
+```
+
+---
+
 ## Session Log: 24 February 2026
 
 ### Full Security Audit & Sharpening — 4 Phases Implemented
