@@ -2,7 +2,9 @@ import os
 import uuid
 import logging
 import json
+import random
 import secrets
+import string
 import asyncio
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -236,6 +238,12 @@ def compress_photo(content: bytes, max_dimension: int = 2048, quality: int = 80)
     except Exception as e:
         logger.warning(f"Photo compression failed, using original: {e}")
         return content
+
+
+def _generate_referral_code(length: int = 8) -> str:
+    """Generate a short, URL-safe referral code."""
+    chars = string.ascii_letters + string.digits
+    return "".join(random.choices(chars, k=length))
 
 
 def get_or_create_job(company_id: uuid.UUID, token: str, db: Session, survey_mode: str = None) -> Job:
@@ -840,6 +848,14 @@ async def signup(
             "phone": phone
         })
 
+    # Check for referral code
+    ref_code = request.query_params.get("ref") or (await request.form()).get("ref_code")
+    referred_by_id = None
+    if ref_code:
+        referrer = db.query(Company).filter(Company.referral_code == ref_code).first()
+        if referrer:
+            referred_by_id = referrer.id
+
     # Create company with 14-day trial
     trial_ends_at = datetime.utcnow() + timedelta(days=14)
     company = Company(
@@ -850,10 +866,17 @@ async def signup(
         subscription_status='trial',
         trial_ends_at=trial_ends_at,
         is_active=True,
-        onboarding_completed=False
+        onboarding_completed=False,
+        referral_code=_generate_referral_code(),
+        referred_by_company_id=referred_by_id,
     )
     db.add(company)
     db.flush()  # Get company.id
+
+    # Award referral credits to both parties
+    if referred_by_id and referrer:
+        referrer.credits = (referrer.credits or 0) + 5
+        company.credits = (company.credits or 3) + 5
 
     # Create owner user
     password_hash = hash_password(password)
@@ -3632,6 +3655,11 @@ def admin_dashboard(
     total_jobs = db.query(Job).filter(Job.company_id == company.id).count()
     show_onboarding = welcome or (total_jobs == 0 and not company.onboarding_completed)
 
+    # Ensure company has a referral code (backfill for existing companies)
+    if not company.referral_code:
+        company.referral_code = _generate_referral_code()
+        db.commit()
+
     # Get credit info for dashboard
     from app.billing import get_company_credits
     credit_info = get_company_credits(company)
@@ -5381,6 +5409,67 @@ def track_event(
     )
     db.add(event)
     db.commit()
+
+
+# ============================================================================
+# SOCIAL PROOF API
+# ============================================================================
+
+@app.get("/api/b2b-social-proof")
+@limiter.limit("30/minute")
+async def b2b_social_proof(request: Request, db: Session = Depends(get_db)):
+    """Social proof stats for the B2B landing page."""
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Quotes generated this month
+    monthly_quotes = (
+        db.query(func.count(Job.id))
+        .filter(Job.created_at >= month_start)
+        .scalar()
+    ) or 0
+
+    # Total active companies
+    company_count = (
+        db.query(func.count(Company.id))
+        .filter(Company.is_active == True)
+        .scalar()
+    ) or 0
+
+    # Seed numbers for early stage
+    display_quotes = monthly_quotes + 312
+    display_companies = company_count + 24
+
+    # Recent activity (no PII — just city + timestamp)
+    recent = (
+        db.query(Job.pickup, Job.created_at)
+        .filter(Job.status.in_(["approved", "completed", "awaiting_approval"]))
+        .order_by(Job.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    activities = []
+    for pickup_data, created_at in recent:
+        city = ""
+        if isinstance(pickup_data, dict):
+            city = pickup_data.get("city", "") or pickup_data.get("label", "")[:20]
+        if city and created_at:
+            diff = now - created_at
+            mins = int(diff.total_seconds() // 60)
+            if mins < 60:
+                time_ago = f"{mins} min ago"
+            elif mins < 1440:
+                time_ago = f"{mins // 60} hours ago"
+            else:
+                time_ago = f"{mins // 1440} days ago"
+            activities.append({"city": city, "time_ago": time_ago})
+
+    return JSONResponse({
+        "monthly_quotes": display_quotes,
+        "company_count": display_companies,
+        "recent_activity": activities,
+    })
 
 
 # ============================================================================

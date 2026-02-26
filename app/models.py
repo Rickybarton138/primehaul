@@ -73,6 +73,10 @@ class Company(Base):
     is_partner = Column(Boolean, default=False)
     partner_name = Column(String(100))  # e.g., "Ricky - Infrastructure Partner"
 
+    # Referral system
+    referral_code = Column(String(8), unique=True, index=True)
+    referred_by_company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id'), index=True)
+
     # Relationships
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
     pricing_config = relationship("PricingConfig", back_populates="company", uselist=False, cascade="all, delete-orphan")

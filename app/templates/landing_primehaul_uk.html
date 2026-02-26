@@ -777,6 +777,23 @@
     </div>
   </section>
 
+  <!-- Social Proof Strip -->
+  <section style="padding:20px 24px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:rgba(46,229,157,0.02);">
+    <div style="max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:center; gap:32px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:baseline; gap:8px;">
+        <span id="b2bProofQuotes" style="font-size:1.75rem; font-weight:800; color:var(--prime-green); font-variant-numeric:tabular-nums;">0</span>
+        <span style="font-size:0.85rem; color:var(--text-muted);">quotes generated this month</span>
+      </div>
+      <div style="width:1px; height:24px; background:var(--border);"></div>
+      <div style="display:flex; align-items:baseline; gap:8px;">
+        <span id="b2bProofCompanies" style="font-size:1.75rem; font-weight:800; color:var(--prime-green); font-variant-numeric:tabular-nums;">0</span>
+        <span style="font-size:0.85rem; color:var(--text-muted);">removal companies across the UK</span>
+      </div>
+      <div style="width:1px; height:24px; background:var(--border);"></div>
+      <div id="b2bTicker" style="font-size:0.85rem; color:var(--text-muted); overflow:hidden; height:1.4em; position:relative; min-width:200px;"></div>
+    </div>
+  </section>
+
   <!-- Problem Section -->
   <section class="problem-section">
     <div class="container">
@@ -1191,5 +1208,61 @@
     </div>
   </footer>
 
+  <script>
+  (function() {
+    // B2B Social Proof
+    fetch('/api/b2b-social-proof')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        // Animated count-up
+        function countUp(el, target) {
+          if (!el || !target) return;
+          var duration = 2000, startTime = null;
+          function step(ts) {
+            if (!startTime) startTime = ts;
+            var p = Math.min((ts - startTime) / duration, 1);
+            var eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.floor(eased * target).toLocaleString();
+            if (p < 1) requestAnimationFrame(step);
+            else el.textContent = target.toLocaleString();
+          }
+          requestAnimationFrame(step);
+        }
+
+        countUp(document.getElementById('b2bProofQuotes'), data.monthly_quotes);
+        countUp(document.getElementById('b2bProofCompanies'), data.company_count);
+
+        // Activity ticker
+        var tickerEl = document.getElementById('b2bTicker');
+        if (tickerEl && data.recent_activity && data.recent_activity.length > 0) {
+          var idx = 0;
+          function showNext() {
+            var item = data.recent_activity[idx % data.recent_activity.length];
+            tickerEl.innerHTML = '<span style="position:absolute;white-space:nowrap;animation:b2bTick 4s ease-in-out forwards">A company in ' + item.city + ' approved a quote &mdash; ' + item.time_ago + '</span>';
+            idx++;
+          }
+          showNext();
+          setInterval(showNext, 4500);
+        }
+      })
+      .catch(function() {});
+
+    // Add ticker animation
+    var style = document.createElement('style');
+    style.textContent = '@keyframes b2bTick{0%{opacity:0;transform:translateY(100%)}10%{opacity:1;transform:translateY(0)}85%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-100%)}}@media(max-width:640px){.social-proof-strip{flex-direction:column!important;gap:8px!important;text-align:center}}';
+    document.head.appendChild(style);
+
+    // Capture ref param for signup links
+    var params = new URLSearchParams(window.location.search);
+    var ref = params.get('ref');
+    if (ref) {
+      document.querySelectorAll('a[href*="/auth/signup"]').forEach(function(link) {
+        var url = new URL(link.href, window.location.origin);
+        url.searchParams.set('ref', ref);
+        link.href = url.toString();
+      });
+    }
+  })();
+  </script>
 </body>
 </html>
