@@ -68,6 +68,19 @@ class Settings:
         self.STAGING_USERNAME: str = os.getenv("STAGING_USERNAME", "primehaul")
         self.STAGING_PASSWORD: str = os.getenv("STAGING_PASSWORD", "changeme123")
 
+        # Social Media Automation
+        self.META_PAGE_ACCESS_TOKEN: str = os.getenv("META_PAGE_ACCESS_TOKEN", "")
+        self.META_PAGE_ID: str = os.getenv("META_PAGE_ID", "")
+        self.META_INSTAGRAM_ACCOUNT_ID: str = os.getenv("META_INSTAGRAM_ACCOUNT_ID", "")
+        self.X_API_KEY: str = os.getenv("X_API_KEY", "")
+        self.X_API_SECRET: str = os.getenv("X_API_SECRET", "")
+        self.X_ACCESS_TOKEN: str = os.getenv("X_ACCESS_TOKEN", "")
+        self.X_ACCESS_TOKEN_SECRET: str = os.getenv("X_ACCESS_TOKEN_SECRET", "")
+        self.LINKEDIN_ACCESS_TOKEN: str = os.getenv("LINKEDIN_ACCESS_TOKEN", "")
+        self.LINKEDIN_ORG_ID: str = os.getenv("LINKEDIN_ORG_ID", "")
+        self.SOCIAL_AUTO_PUBLISH: bool = os.getenv("SOCIAL_AUTO_PUBLISH", "true").lower() == "true"
+        self.SOCIAL_POSTS_PER_DAY: int = int(os.getenv("SOCIAL_POSTS_PER_DAY", "2"))
+
     def _require(self, key: str) -> str:
         """Get a required env var or exit with a clear error."""
         value = os.getenv(key)

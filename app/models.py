@@ -955,3 +955,60 @@ class TermsAcceptance(Base):
     # Relationships
     job = relationship("Job", back_populates="terms_acceptance")
     company = relationship("Company")
+
+
+# ============================================================================
+# SOCIAL MEDIA AUTOMATION
+# ============================================================================
+
+
+class SocialPost(Base):
+    """Auto-generated social media posts for B2B content marketing."""
+    __tablename__ = "social_posts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    scheduled_for = Column(DateTime(timezone=True), index=True)
+    published_at = Column(DateTime(timezone=True))
+
+    platform = Column(String(20), nullable=False, index=True)  # facebook/instagram/x/linkedin
+    content_type = Column(String(30))  # growth/efficiency/insight/feature/proof
+    content_pillar = Column(String(50))
+    caption = Column(Text, nullable=False)
+    hashtags = Column(Text)
+    image_path = Column(Text)
+
+    status = Column(String(20), default="scheduled", index=True)  # draft/scheduled/published/failed
+    platform_post_id = Column(String(255))
+    engagement = Column(JSONB)  # {likes, comments, shares, impressions}
+    error_message = Column(Text)
+
+
+class SocialAccount(Base):
+    """Connected social media platform accounts."""
+    __tablename__ = "social_accounts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    platform = Column(String(20), nullable=False, unique=True)
+    account_name = Column(String(255))
+    access_token = Column(Text)
+    refresh_token = Column(Text)
+    token_expires_at = Column(DateTime(timezone=True))
+    page_id = Column(String(255))
+    is_active = Column(Boolean, default=True)
+    last_posted_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class SocialConfig(Base):
+    """Singleton config for social media auto-pilot."""
+    __tablename__ = "social_config"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    posts_per_day = Column(Integer, default=2)
+    posting_times = Column(JSONB, default=lambda: ["09:00", "18:00"])
+    active_platforms = Column(JSONB, default=lambda: ["facebook", "instagram", "x", "linkedin"])
+    content_mix = Column(JSONB, default=lambda: {"growth": 25, "efficiency": 25, "insight": 20, "feature": 20, "proof": 10})
+    tone = Column(String(50), default="professional_authoritative")
+    auto_publish = Column(Boolean, default=True)
+    last_generation_at = Column(DateTime(timezone=True))

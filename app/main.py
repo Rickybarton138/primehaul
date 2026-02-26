@@ -1223,6 +1223,147 @@ def superadmin_fix_survey_counts(request: Request, db: Session = Depends(get_db)
 
 
 # ============================================================================
+# SOCIAL MEDIA AUTO-PILOT SCHEDULER
+# ============================================================================
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+_scheduler = BackgroundScheduler()
+
+
+@app.on_event("startup")
+def start_social_scheduler():
+    from app.social_autopilot import (
+        generate_weekly_content,
+        publish_due_posts,
+        check_all_engagement,
+    )
+
+    _scheduler.add_job(
+        generate_weekly_content,
+        CronTrigger(day_of_week="sun", hour=0, minute=0),
+        id="social_weekly_generate",
+        replace_existing=True,
+    )
+    _scheduler.add_job(
+        publish_due_posts,
+        CronTrigger(minute="*/15"),
+        id="social_publish_due",
+        replace_existing=True,
+    )
+    _scheduler.add_job(
+        check_all_engagement,
+        CronTrigger(hour=3, minute=0),
+        id="social_engagement_check",
+        replace_existing=True,
+    )
+    _scheduler.start()
+    logger.info("Social auto-pilot scheduler started")
+
+
+@app.on_event("shutdown")
+def stop_social_scheduler():
+    _scheduler.shutdown(wait=False)
+    logger.info("Social auto-pilot scheduler stopped")
+
+
+# ============================================================================
+# SUPERADMIN: SOCIAL MEDIA DASHBOARD
+# ============================================================================
+
+@app.get("/superadmin/social", response_class=HTMLResponse)
+def superadmin_social_dashboard(request: Request, db: Session = Depends(get_db)):
+    """Social media auto-pilot dashboard (superadmin only)."""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+
+    from app.social_autopilot import _get_config
+    from app.models import SocialPost, SocialConfig
+
+    config = _get_config(db)
+
+    total_posts = db.query(func.count(SocialPost.id)).scalar() or 0
+    published = db.query(func.count(SocialPost.id)).filter(SocialPost.status == "published").scalar() or 0
+    scheduled = db.query(func.count(SocialPost.id)).filter(SocialPost.status == "scheduled").scalar() or 0
+    failed = db.query(func.count(SocialPost.id)).filter(SocialPost.status == "failed").scalar() or 0
+
+    upcoming = (
+        db.query(SocialPost)
+        .filter(SocialPost.status.in_(["scheduled", "draft"]))
+        .order_by(SocialPost.scheduled_for)
+        .limit(20)
+        .all()
+    )
+
+    recent = (
+        db.query(SocialPost)
+        .filter(SocialPost.status == "published")
+        .order_by(SocialPost.published_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    return templates.TemplateResponse("superadmin_social.html", {
+        "request": request,
+        "config": config,
+        "stats": {"total": total_posts, "published": published, "scheduled": scheduled, "failed": failed},
+        "upcoming": upcoming,
+        "recent": recent,
+    })
+
+
+@app.post("/superadmin/social/generate")
+def superadmin_social_generate(request: Request, db: Session = Depends(get_db)):
+    """Force-generate a new content batch."""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+    from app.social_autopilot import force_generate_batch
+    force_generate_batch(db)
+    return RedirectResponse(url="/superadmin/social", status_code=303)
+
+
+@app.post("/superadmin/social/post/{post_id}/publish")
+def superadmin_social_publish(post_id: str, request: Request, db: Session = Depends(get_db)):
+    """Manually publish one post."""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+    from app.social_autopilot import manually_publish_post
+    manually_publish_post(db, post_id)
+    return RedirectResponse(url="/superadmin/social", status_code=303)
+
+
+@app.post("/superadmin/social/post/{post_id}/skip")
+def superadmin_social_skip(post_id: str, request: Request, db: Session = Depends(get_db)):
+    """Skip a scheduled post."""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+    from app.social_autopilot import skip_post
+    skip_post(db, post_id)
+    return RedirectResponse(url="/superadmin/social", status_code=303)
+
+
+@app.post("/superadmin/social/settings")
+async def superadmin_social_settings(request: Request, db: Session = Depends(get_db)):
+    """Update social config."""
+    if not verify_superadmin(request):
+        return RedirectResponse(url="/superadmin/login", status_code=303)
+
+    from app.social_autopilot import _get_config
+    form = await request.form()
+    config = _get_config(db)
+    config.posts_per_day = int(form.get("posts_per_day", 2))
+    config.auto_publish = form.get("auto_publish") == "true"
+    times_raw = form.get("posting_times", "09:00,18:00")
+    config.posting_times = [t.strip() for t in times_raw.split(",") if t.strip()]
+    platforms = form.getlist("platforms")
+    if platforms:
+        config.active_platforms = platforms
+    db.commit()
+    return RedirectResponse(url="/superadmin/social", status_code=303)
+
+
+# ============================================================================
 # PROTECTED PHOTO ACCESS
 # ============================================================================
 

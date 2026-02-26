@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Social Auto-Pilot - PrimeHaul Superadmin</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+  <style>
+    .superadmin-header{
+      background:linear-gradient(135deg, #1a1a2e, #16213e);
+      padding:20px;
+      border-bottom:1px solid rgba(255,255,255,.1);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .superadmin-title{font-size:24px;font-weight:800;color:#fff;}
+    .superadmin-sub{font-size:13px;color:rgba(255,255,255,.5);margin-top:4px;}
+    .nav-links a{color:rgba(255,255,255,.6);text-decoration:none;font-size:13px;margin-left:16px;}
+    .nav-links a:hover{color:#2ee59d;}
+
+    .content{padding:20px;max-width:1200px;margin:0 auto;}
+
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;margin-bottom:24px;}
+    .stat-card{padding:16px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);text-align:center;}
+    .stat-value{font-size:28px;font-weight:800;color:#2ee59d;}
+    .stat-value.blue{color:#60a5fa;}
+    .stat-value.red{color:#f87171;}
+    .stat-label{font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+
+    .actions-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;align-items:center;}
+    .btn-generate{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:700;background:#2ee59d;color:#0b0b0c;}
+    .btn-generate:hover{background:#26cc89;}
+    .meta-info{font-size:12px;color:rgba(255,255,255,.4);margin-left:auto;}
+
+    .section{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:24px;overflow:hidden;}
+    .section-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);font-size:16px;font-weight:700;color:#fff;}
+
+    .post-table{width:100%;border-collapse:collapse;}
+    .post-table th{text-align:left;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.4);border-bottom:1px solid rgba(255,255,255,.06);}
+    .post-table td{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;vertical-align:top;}
+    .post-table tr:hover{background:rgba(255,255,255,.02);}
+
+    .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase;}
+    .badge-facebook{background:rgba(24,119,242,.15);color:#1877F2;}
+    .badge-instagram{background:rgba(225,48,108,.15);color:#E1306C;}
+    .badge-x{background:rgba(255,255,255,.08);color:#fff;}
+    .badge-linkedin{background:rgba(10,102,194,.15);color:#0A66C2;}
+    .badge-scheduled{background:rgba(46,229,157,.12);color:#2ee59d;}
+    .badge-published{background:rgba(46,229,157,.25);color:#2ee59d;}
+    .badge-draft{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);}
+    .badge-failed{background:rgba(255,59,48,.15);color:#ff3b30;}
+
+    .caption-preview{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.7);}
+    .post-actions form{display:inline;}
+    .btn-sm{padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.6);cursor:pointer;}
+    .btn-sm:hover{background:rgba(255,255,255,.05);color:#fff;}
+    .btn-publish{border-color:#2ee59d;color:#2ee59d;}
+
+    .engagement-pills{display:flex;gap:4px;flex-wrap:wrap;}
+    .engagement-pill{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;background:rgba(255,255,255,.04);border-radius:4px;font-size:11px;color:rgba(255,255,255,.5);}
+
+    .settings-form{padding:20px;}
+    .settings-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;}
+    .settings-field{flex:1;min-width:180px;}
+    .settings-field label{display:block;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px;}
+    .settings-field input,.settings-field select{width:100%;padding:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px;}
+    .settings-field input:focus{outline:none;border-color:#2ee59d;}
+    .checkbox-row{display:flex;align-items:center;gap:8px;}
+    .checkbox-row input[type="checkbox"]{accent-color:#2ee59d;width:18px;height:18px;}
+    .platform-checks{display:flex;gap:12px;flex-wrap:wrap;}
+    .platform-checks label{display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;color:#fff;}
+    .empty{padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:13px;}
+  </style>
+</head>
+<body>
+  <div class="superadmin-header">
+    <div>
+      <div class="superadmin-title">Social Auto-Pilot</div>
+      <div class="superadmin-sub">AI-generated B2B social media content</div>
+    </div>
+    <div class="nav-links">
+      <a href="/superadmin/dashboard">Dashboard</a>
+      <a href="/superadmin/social">Social</a>
+      <a href="/superadmin/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.scheduled }}</div>
+        <div class="stat-label">Scheduled</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.published }}</div>
+        <div class="stat-label">Published</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value blue">{{ stats.total }}</div>
+        <div class="stat-label">Total Posts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value red">{{ stats.failed }}</div>
+        <div class="stat-label">Failed</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-bar">
+      <form method="post" action="/superadmin/social/generate">
+        <button type="submit" class="btn-generate">Generate Batch</button>
+      </form>
+      <div class="meta-info">
+        {% if config.last_generation_at %}
+          Last generated: {{ config.last_generation_at.strftime('%d %b %Y %H:%M') }}
+        {% else %}
+          No content generated yet
+        {% endif %}
+        &middot;
+        Auto-publish: <strong style="color:{% if config.auto_publish %}#2ee59d{% else %}#f87171{% endif %}">{{ "ON" if config.auto_publish else "OFF" }}</strong>
+      </div>
+    </div>
+
+    <!-- Upcoming Posts -->
+    <div class="section">
+      <div class="section-header">Upcoming Posts</div>
+      {% if upcoming %}
+      <table class="post-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Type</th>
+            <th>Caption</th>
+            <th>Scheduled</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for post in upcoming %}
+          <tr>
+            <td><span class="badge badge-{{ post.platform }}">{{ post.platform }}</span></td>
+            <td style="color:rgba(255,255,255,.5);">{{ post.content_pillar or post.content_type }}</td>
+            <td class="caption-preview" title="{{ post.caption }}">{{ post.caption[:80] }}{% if post.caption|length > 80 %}...{% endif %}</td>
+            <td style="font-size:12px;">{% if post.scheduled_for %}{{ post.scheduled_for.strftime('%d %b %H:%M') }}{% else %}-{% endif %}</td>
+            <td><span class="badge badge-{{ post.status }}">{{ post.status }}</span></td>
+            <td class="post-actions">
+              <form method="post" action="/superadmin/social/post/{{ post.id }}/publish"><button class="btn-sm btn-publish">Publish</button></form>
+              <form method="post" action="/superadmin/social/post/{{ post.id }}/skip"><button class="btn-sm">Skip</button></form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No upcoming posts. Click "Generate Batch" to create content.</div>
+      {% endif %}
+    </div>
+
+    <!-- Recent Published -->
+    <div class="section">
+      <div class="section-header">Recently Published</div>
+      {% if recent %}
+      <table class="post-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Type</th>
+            <th>Caption</th>
+            <th>Published</th>
+            <th>Engagement</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for post in recent %}
+          <tr>
+            <td><span class="badge badge-{{ post.platform }}">{{ post.platform }}</span></td>
+            <td style="color:rgba(255,255,255,.5);">{{ post.content_pillar or post.content_type }}</td>
+            <td class="caption-preview" title="{{ post.caption }}">{{ post.caption[:80] }}{% if post.caption|length > 80 %}...{% endif %}</td>
+            <td style="font-size:12px;">{% if post.published_at %}{{ post.published_at.strftime('%d %b %H:%M') }}{% else %}-{% endif %}</td>
+            <td>
+              {% if post.engagement %}
+              <div class="engagement-pills">
+                {% if post.engagement.likes is defined %}<span class="engagement-pill">{{ post.engagement.likes }} likes</span>{% endif %}
+                {% if post.engagement.comments is defined %}<span class="engagement-pill">{{ post.engagement.comments }} comments</span>{% endif %}
+                {% if post.engagement.shares is defined %}<span class="engagement-pill">{{ post.engagement.shares }} shares</span>{% endif %}
+              </div>
+              {% else %}
+              <span style="font-size:11px;color:rgba(255,255,255,.3);">Pending</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No published posts yet.</div>
+      {% endif %}
+    </div>
+
+    <!-- Settings -->
+    <div class="section">
+      <div class="section-header">Auto-Pilot Settings</div>
+      <div class="settings-form">
+        <form method="post" action="/superadmin/social/settings">
+          <div class="settings-row">
+            <div class="settings-field">
+              <label>Posts per day</label>
+              <input type="number" name="posts_per_day" value="{{ config.posts_per_day or 2 }}" min="1" max="10">
+            </div>
+            <div class="settings-field">
+              <label>Posting times (comma-separated)</label>
+              <input type="text" name="posting_times" value="{{ (config.posting_times or ['09:00','18:00']) | join(', ') }}" placeholder="09:00, 18:00">
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field">
+              <label>Active Platforms</label>
+              <div class="platform-checks">
+                {% set active = config.active_platforms or ['facebook','instagram','x','linkedin'] %}
+                <label><input type="checkbox" name="platforms" value="facebook" {% if 'facebook' in active %}checked{% endif %}> Facebook</label>
+                <label><input type="checkbox" name="platforms" value="instagram" {% if 'instagram' in active %}checked{% endif %}> Instagram</label>
+                <label><input type="checkbox" name="platforms" value="x" {% if 'x' in active %}checked{% endif %}> X</label>
+                <label><input type="checkbox" name="platforms" value="linkedin" {% if 'linkedin' in active %}checked{% endif %}> LinkedIn</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field">
+              <div class="checkbox-row">
+                <input type="checkbox" name="auto_publish" value="true" id="auto_publish" {% if config.auto_publish %}checked{% endif %}>
+                <label for="auto_publish" style="color:#fff;cursor:pointer;">Full auto-pilot (publish automatically)</label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-generate" style="margin-top:8px;">Save Settings</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
