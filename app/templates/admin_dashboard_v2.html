@@ -133,6 +133,9 @@
         <a href="/{{ company_slug }}/admin/payments" class="chip" style="text-decoration:none;">
           💳 Payments
         </a>
+        <a href="/{{ company_slug }}/admin/email" class="chip" style="text-decoration:none;">
+          ✉️ Email
+        </a>
         <a href="/{{ company_slug }}/admin/buy-credits" class="chip" style="text-decoration:none;{% if low_credits %} background:rgba(255,77,79,.2); border-color:rgba(255,77,79,.3);{% endif %}">
           🎟️ Credits{% if not is_partner %}: {{ credits }}{% endif %}{% if low_credits %} ⚠️{% endif %}
         </a>

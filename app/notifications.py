@@ -6,8 +6,10 @@ This module handles all email notifications:
 - B2B: Welcome emails, trial reminders, subscription updates
 
 Uses Python's smtplib for now (upgrade to SendGrid/Mailgun in production)
+All emails are logged to the email_logs table for company dashboard visibility.
 """
 
+import logging
 import smtplib
 import os
 from email.mime.text import MIMEText
@@ -19,6 +21,8 @@ from sqlalchemy.orm import Session
 from app.models import (
     Company, MarketplaceJob, Bid, User
 )
+
+logger = logging.getLogger("primehaul.notifications")
 
 
 def get_smtp_config():
@@ -33,6 +37,49 @@ def get_smtp_config():
     }
 
 
+# ---------------------------------------------------------------------------
+# Email logging helper (writes to email_logs table)
+# ---------------------------------------------------------------------------
+def _log_email(
+    *,
+    to_email: str,
+    subject: str,
+    email_type: str,
+    status: str,
+    error_message: str | None = None,
+    company_id=None,
+    job_id=None,
+    marketplace_job_id=None,
+):
+    """Log an email to the database using an isolated session.
+
+    Uses its own SessionLocal() so logging failures never interfere
+    with the caller's transaction.
+    """
+    try:
+        from app.database import SessionLocal
+        from app.models import EmailLog
+
+        db = SessionLocal()
+        try:
+            log = EmailLog(
+                to_email=to_email,
+                subject=subject,
+                email_type=email_type,
+                status=status,
+                error_message=error_message,
+                company_id=company_id,
+                job_id=job_id,
+                marketplace_job_id=marketplace_job_id,
+            )
+            db.add(log)
+            db.commit()
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("[EMAIL-LOG] Failed to write email log entry")
+
+
 def send_email(
     to_email: str,
     subject: str,
@@ -40,7 +87,12 @@ def send_email(
     text_body: Optional[str] = None,
     from_name: Optional[str] = None,
     reply_to: Optional[str] = None,
-    smtp_config: Optional[dict] = None
+    smtp_config: Optional[dict] = None,
+    *,
+    email_type: str = "manual",
+    company_id=None,
+    job_id=None,
+    marketplace_job_id=None,
 ) -> bool:
     """
     Send an email using SMTP
@@ -55,10 +107,23 @@ def send_email(
         smtp_config: Optional per-company SMTP config dict with keys:
                      host, port, username, password, from_email.
                      Falls back to default PrimeHaul SMTP if not provided.
+        email_type: Type label for the email log (keyword-only)
+        company_id: FK to companies table (keyword-only)
+        job_id: FK to jobs table (keyword-only)
+        marketplace_job_id: FK to marketplace_jobs table (keyword-only)
 
     Returns:
         True if sent successfully, False otherwise
     """
+    log_kwargs = dict(
+        to_email=to_email,
+        subject=subject,
+        email_type=email_type,
+        company_id=company_id,
+        job_id=job_id,
+        marketplace_job_id=marketplace_job_id,
+    )
+
     # Use company SMTP if provided, otherwise fall back to default
     if smtp_config and smtp_config.get("username") and smtp_config.get("password"):
         config = {
@@ -76,7 +141,8 @@ def send_email(
 
     # Skip if SMTP not configured (development mode)
     if not config["username"] or not config["password"]:
-        print(f"[EMAIL SKIPPED - SMTP not configured] To: {to_email}, Subject: {subject}")
+        logger.info("[EMAIL] SMTP not configured. Would send to %s: %s", to_email, subject)
+        _log_email(**log_kwargs, status="skipped")
         return True
 
     try:
@@ -110,11 +176,13 @@ def send_email(
             server.send_message(msg)
 
         source = "company SMTP" if using_company_smtp else "PrimeHaul SMTP"
-        print(f"[EMAIL SENT via {source}] To: {to_email}, Subject: {subject}")
+        logger.info("[EMAIL] Sent via %s to %s: %s", source, to_email, subject)
+        _log_email(**log_kwargs, status="sent")
         return True
 
     except Exception as e:
-        print(f"[EMAIL FAILED] To: {to_email}, Error: {e}")
+        logger.exception("[EMAIL] Failed to send to %s: %s", to_email, subject)
+        _log_email(**log_kwargs, status="failed", error_message=str(e))
         return False
 
 
@@ -264,7 +332,12 @@ def send_new_job_notification(company: Company, job: MarketplaceJob, db: Session
     </html>
     """
 
-    return send_email(company.email, subject, html_body)
+    return send_email(
+        company.email, subject, html_body,
+        email_type="marketplace_job",
+        company_id=company.id,
+        marketplace_job_id=job.id,
+    )
 
 
 def send_new_bid_notification(job: MarketplaceJob, bid: Bid, db: Session) -> bool:
@@ -354,7 +427,11 @@ def send_new_bid_notification(job: MarketplaceJob, bid: Bid, db: Session) -> boo
     </html>
     """
 
-    return send_email(job.customer_email, subject, html_body)
+    return send_email(
+        job.customer_email, subject, html_body,
+        email_type="marketplace_bid",
+        marketplace_job_id=job.id,
+    )
 
 
 def send_job_awarded_notification(company: Company, job: MarketplaceJob, bid: Bid, db: Session) -> bool:
@@ -467,7 +544,12 @@ def send_job_awarded_notification(company: Company, job: MarketplaceJob, bid: Bi
     </html>
     """
 
-    return send_email(company.email, subject, html_body)
+    return send_email(
+        company.email, subject, html_body,
+        email_type="marketplace_awarded",
+        company_id=company.id,
+        marketplace_job_id=job.id,
+    )
 
 
 def send_job_not_awarded_notification(company: Company, job: MarketplaceJob, db: Session) -> bool:
@@ -552,7 +634,12 @@ def send_job_not_awarded_notification(company: Company, job: MarketplaceJob, db:
     </html>
     """
 
-    return send_email(company.email, subject, html_body)
+    return send_email(
+        company.email, subject, html_body,
+        email_type="marketplace_not_awarded",
+        company_id=company.id,
+        marketplace_job_id=job.id,
+    )
 
 
 # ==========================================
@@ -648,7 +735,11 @@ def send_welcome_email(company: Company, user: User, temporary_password: str) ->
     </html>
     """
 
-    return send_email(user.email, subject, html_body)
+    return send_email(
+        user.email, subject, html_body,
+        email_type="welcome",
+        company_id=company.id,
+    )
 
 
 def send_trial_ending_reminder(company: Company, days_left: int) -> bool:
@@ -725,7 +816,11 @@ def send_trial_ending_reminder(company: Company, days_left: int) -> bool:
     </html>
     """
 
-    return send_email(company.email, subject, html_body)
+    return send_email(
+        company.email, subject, html_body,
+        email_type="trial_reminder",
+        company_id=company.id,
+    )
 
 
 # ==========================================
@@ -894,7 +989,11 @@ This takes less than 5 minutes.
 {company.phone or ''}
     """
 
-    return send_email(customer_email, subject, html_body, text_body)
+    return send_email(
+        customer_email, subject, html_body, text_body,
+        email_type="survey_invitation",
+        company_id=company.id,
+    )
 
 
 # ==========================================
@@ -911,7 +1010,9 @@ def send_quote_approved_email(
     dropoff_label: str = "",
     company_phone: str = "",
     company_email: str = "",
-    smtp_config: Optional[dict] = None
+    smtp_config: Optional[dict] = None,
+    company_id=None,
+    job_id=None,
 ) -> bool:
     """
     Send email to customer when their quote has been approved.
@@ -1041,11 +1142,41 @@ Click the link above to review your quote and confirm your booking.
         return send_email(
             customer_email, subject, html_body, text_body,
             from_name=company_name,
-            smtp_config=smtp_config
+            smtp_config=smtp_config,
+            email_type="quote_approved",
+            company_id=company_id,
+            job_id=job_id,
         )
     else:
         return send_email(
             customer_email, subject, html_body, text_body,
             from_name=f"{company_name} via PrimeHaul",
-            reply_to=company_email or None
+            reply_to=company_email or None,
+            email_type="quote_approved",
+            company_id=company_id,
+            job_id=job_id,
         )
+
+
+# ==========================================
+# MANUAL EMAIL (compose from dashboard)
+# ==========================================
+
+def send_manual_email(
+    to_email: str,
+    subject: str,
+    body_html: str,
+    *,
+    company_id=None,
+    smtp_config: Optional[dict] = None,
+) -> bool:
+    """Send a manual email composed from the company email dashboard.
+
+    Uses company SMTP when provided, otherwise falls back to PrimeHaul SMTP.
+    """
+    return send_email(
+        to_email, subject, body_html,
+        smtp_config=smtp_config,
+        email_type="manual",
+        company_id=company_id,
+    )

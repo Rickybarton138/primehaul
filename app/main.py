@@ -29,7 +29,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.ai_vision import extract_removal_inventory
 from app.database import get_db, engine
-from app.models import Base, Company, User, PricingConfig, Job, Room, Item, Photo, AdminNote, UsageAnalytics, UserInteraction, AIItemPrediction, MarketplaceJob, Bid, JobBroadcast, Commission, MarketplaceRoom, MarketplaceItem, MarketplacePhoto, ItemFeedback, FurnitureCatalog, TrainingDataset, LearnedCorrection
+from app.models import Base, Company, User, PricingConfig, Job, Room, Item, Photo, AdminNote, UsageAnalytics, UserInteraction, AIItemPrediction, MarketplaceJob, Bid, JobBroadcast, Commission, MarketplaceRoom, MarketplaceItem, MarketplacePhoto, ItemFeedback, FurnitureCatalog, TrainingDataset, LearnedCorrection, EmailLog
 from app.auth import hash_password, verify_password, create_access_token, validate_password_strength
 from app.dependencies import get_current_user, require_role, verify_company_access, get_optional_current_user
 from app.sms import notify_quote_approved, notify_quote_submitted, notify_booking_confirmed
@@ -3929,6 +3929,97 @@ async def send_survey_invite(
         return JSONResponse({"error": "Failed to send invitation"}, status_code=500)
 
 
+# ==========================================
+# COMPANY EMAIL DASHBOARD
+# ==========================================
+
+@app.get("/{company_slug}/admin/email", response_class=HTMLResponse)
+def admin_email_dashboard(
+    request: Request,
+    company_slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    type: str = "",
+    status: str = "",
+):
+    """Company email activity dashboard — log, stats, compose."""
+    company = verify_company_access(company_slug, current_user)
+
+    # SMTP connection status
+    smtp_connected = bool(company.smtp_host and company.smtp_username and company.smtp_password)
+    smtp_from_email = (company.smtp_from_email or company.smtp_username) if smtp_connected else None
+
+    # Stats (scoped to this company)
+    from sqlalchemy import func as sqlfunc
+    base_q = db.query(EmailLog).filter(EmailLog.company_id == company.id)
+    total_sent = base_q.filter(EmailLog.status == "sent").count()
+    total_failed = base_q.filter(EmailLog.status == "failed").count()
+
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    sent_today = base_q.filter(EmailLog.status == "sent", EmailLog.sent_at >= today_start).count()
+
+    # Filtered log query
+    log_q = base_q
+    if type:
+        log_q = log_q.filter(EmailLog.email_type == type)
+    if status:
+        log_q = log_q.filter(EmailLog.status == status)
+    logs = log_q.order_by(EmailLog.sent_at.desc()).limit(200).all()
+
+    return templates.TemplateResponse("admin_email.html", {
+        "request": request,
+        "company": company,
+        "company_slug": company_slug,
+        "smtp_connected": smtp_connected,
+        "smtp_from_email": smtp_from_email,
+        "total_sent": total_sent,
+        "sent_today": sent_today,
+        "total_failed": total_failed,
+        "logs": logs,
+        "filter_type": type,
+        "filter_status": status,
+    })
+
+
+@app.post("/{company_slug}/admin/email/send")
+def admin_email_send(
+    company_slug: str,
+    to_email: str = Form(...),
+    subject: str = Form(...),
+    body: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Compose and send an ad-hoc email from the company email dashboard."""
+    company = verify_company_access(company_slug, current_user)
+
+    # Build company SMTP config (same pattern as quote approval)
+    company_smtp = None
+    if company.smtp_host and company.smtp_username and company.smtp_password:
+        company_smtp = {
+            "host": company.smtp_host,
+            "port": company.smtp_port or 587,
+            "username": company.smtp_username,
+            "password": company.smtp_password,
+            "from_email": company.smtp_from_email or company.smtp_username,
+        }
+
+    # Convert plain text body to basic HTML paragraphs
+    import html as html_mod
+    body_escaped = html_mod.escape(body)
+    body_html = "<br>".join(body_escaped.split("\n"))
+
+    notifications.send_manual_email(
+        to_email=to_email,
+        subject=subject,
+        body_html=body_html,
+        company_id=company.id,
+        smtp_config=company_smtp,
+    )
+
+    return RedirectResponse(url=f"/{company_slug}/admin/email", status_code=303)
+
+
 @app.get("/{company_slug}/admin/job/{token}", response_class=HTMLResponse)
 def admin_job_review(
     request: Request,
@@ -4062,7 +4153,9 @@ def admin_approve_job(
                 dropoff_label=(job.dropoff or {}).get("label", ""),
                 company_phone=company.phone or "",
                 company_email=company.email or "",
-                smtp_config=company_smtp
+                smtp_config=company_smtp,
+                company_id=company.id,
+                job_id=job.id,
             )
 
     return RedirectResponse(url=f"/{company_slug}/admin/dashboard", status_code=303)
@@ -4240,7 +4333,9 @@ def admin_quick_approve(
                 dropoff_label=(job.dropoff or {}).get("label", ""),
                 company_phone=company.phone or "",
                 company_email=company.email or "",
-                smtp_config=company_smtp
+                smtp_config=company_smtp,
+                company_id=company.id,
+                job_id=job.id,
             )
 
         return JSONResponse({"success": True, "final_price": final_price})

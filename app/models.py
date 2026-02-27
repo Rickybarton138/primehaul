@@ -1000,6 +1000,34 @@ class SocialAccount(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class EmailLog(Base):
+    """Email activity log - tracks all emails sent through the platform."""
+    __tablename__ = "email_logs"
+    __table_args__ = (
+        Index('idx_email_logs_sent_at', 'sent_at'),
+        Index('idx_email_logs_email_type', 'email_type'),
+        Index('idx_email_logs_company_id', 'company_id'),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    to_email = Column(String(255), nullable=False)
+    subject = Column(String(500), nullable=False)
+    email_type = Column(String(50), nullable=False)  # survey_invitation / quote_approved / welcome / trial_reminder / marketplace_job / marketplace_bid / marketplace_awarded / marketplace_not_awarded / manual
+    status = Column(String(20), nullable=False)  # sent / failed / skipped
+    error_message = Column(Text)
+    sent_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    # Optional FKs to related entities
+    company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id', ondelete='SET NULL'), nullable=True)
+    job_id = Column(UUID(as_uuid=True), ForeignKey('jobs.id', ondelete='SET NULL'), nullable=True)
+    marketplace_job_id = Column(UUID(as_uuid=True), ForeignKey('marketplace_jobs.id', ondelete='SET NULL'), nullable=True)
+
+    # Relationships
+    company = relationship("Company")
+    job = relationship("Job")
+    marketplace_job = relationship("MarketplaceJob")
+
+
 class SocialConfig(Base):
     """Singleton config for social media auto-pilot."""
     __tablename__ = "social_config"
