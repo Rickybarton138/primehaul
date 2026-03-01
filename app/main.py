@@ -29,7 +29,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.ai_vision import extract_removal_inventory
 from app.database import get_db, engine
-from app.models import Base, Company, User, PricingConfig, Job, Room, Item, Photo, AdminNote, UsageAnalytics, UserInteraction, AIItemPrediction, MarketplaceJob, Bid, JobBroadcast, Commission, MarketplaceRoom, MarketplaceItem, MarketplacePhoto, ItemFeedback, FurnitureCatalog, TrainingDataset, LearnedCorrection, EmailLog
+from app.models import Base, Company, User, PricingConfig, Job, Room, Item, Photo, AdminNote, UsageAnalytics, UserInteraction, AIItemPrediction, MarketplaceJob, Bid, JobBroadcast, Commission, MarketplaceRoom, MarketplaceItem, MarketplacePhoto, ItemFeedback, FurnitureCatalog, TrainingDataset, LearnedCorrection, EmailLog, EmailTemplate, EmailSequence, EmailSequenceStep, EmailEnrollment, EmailQueue, EmailPreference, EmailBounce
 from app.auth import hash_password, verify_password, create_access_token, validate_password_strength
 from app.dependencies import get_current_user, require_role, verify_company_access, get_optional_current_user
 from app.sms import notify_quote_approved, notify_quote_submitted, notify_booking_confirmed
@@ -1228,6 +1228,7 @@ def superadmin_fix_survey_counts(request: Request, db: Session = Depends(get_db)
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 _scheduler = BackgroundScheduler()
 
@@ -1260,6 +1261,27 @@ def start_social_scheduler():
     )
     _scheduler.start()
     logger.info("Social auto-pilot scheduler started")
+
+
+@app.on_event("startup")
+def start_email_automation_scheduler():
+    from app.email_engine import process_email_queue, process_enrollments, seed_default_sequences
+
+    seed_default_sequences()
+
+    _scheduler.add_job(
+        process_email_queue,
+        IntervalTrigger(seconds=60),
+        id="email_queue_processor",
+        replace_existing=True,
+    )
+    _scheduler.add_job(
+        process_enrollments,
+        IntervalTrigger(seconds=60, start_date=datetime.utcnow() + timedelta(seconds=30)),
+        id="email_enrollment_processor",
+        replace_existing=True,
+    )
+    logger.info("Email automation scheduler started")
 
 
 @app.on_event("shutdown")
@@ -3920,6 +3942,22 @@ async def send_survey_invite(
                 },
                 db=db
             )
+
+            # Enroll in survey nudge sequence
+            from app.email_engine import enroll_in_sequence
+            enroll_in_sequence(
+                trigger_event="survey_invitation_sent",
+                to_email=customer_email,
+                context={
+                    "customer_name": customer_name or "",
+                    "company_name": company.company_name,
+                    "survey_url": survey_url,
+                    "company_phone": company.phone or "",
+                    "company_email": company.email or "",
+                },
+                company_id=company.id,
+            )
+
             return JSONResponse({"success": True, "message": "Invitation sent successfully"})
         else:
             return JSONResponse({"error": "Failed to send email. Please check your email settings."}, status_code=500)
@@ -4018,6 +4056,155 @@ def admin_email_send(
     )
 
     return RedirectResponse(url=f"/{company_slug}/admin/email", status_code=303)
+
+
+# ============================================================================
+# EMAIL AUTOMATION DASHBOARD & UNSUBSCRIBE
+# ============================================================================
+
+@app.get("/email/unsubscribe", response_class=HTMLResponse)
+def email_unsubscribe(
+    request: Request,
+    email: str = "",
+    category: str = "",
+    sig: str = "",
+    db: Session = Depends(get_db),
+):
+    """GDPR-compliant unsubscribe endpoint with HMAC verification."""
+    from app.email_engine import verify_unsubscribe_signature, cancel_all_enrollments
+
+    valid = False
+    if email and sig:
+        valid = verify_unsubscribe_signature(email, category, sig)
+
+    if valid:
+        pref = db.query(EmailPreference).filter(EmailPreference.email == email).first()
+        if not pref:
+            pref = EmailPreference(email=email, unsubscribed_categories=[], unsubscribed_all=False)
+            db.add(pref)
+
+        if category == "all":
+            pref.unsubscribed_all = True
+        else:
+            cats = list(pref.unsubscribed_categories or [])
+            if category not in cats:
+                cats.append(category)
+            pref.unsubscribed_categories = cats
+
+        db.commit()
+        cancel_all_enrollments(email, db)
+
+    return templates.TemplateResponse("unsubscribe.html", {
+        "request": request,
+        "valid": valid,
+        "email": email,
+        "category": category,
+    })
+
+
+@app.get("/{company_slug}/admin/automation", response_class=HTMLResponse)
+def admin_automation_dashboard(
+    request: Request,
+    company_slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Email automation dashboard — sequences, enrollments, queue stats."""
+    company = verify_company_access(company_slug, current_user)
+
+    sequences = db.query(EmailSequence).order_by(EmailSequence.created_at).all()
+
+    # Enrollment counts per sequence
+    seq_stats = {}
+    for seq in sequences:
+        active_count = db.query(EmailEnrollment).filter(
+            EmailEnrollment.sequence_id == seq.id,
+            EmailEnrollment.status == "active",
+            EmailEnrollment.company_id == company.id,
+        ).count()
+        total_count = db.query(EmailEnrollment).filter(
+            EmailEnrollment.sequence_id == seq.id,
+            EmailEnrollment.company_id == company.id,
+        ).count()
+        seq_stats[str(seq.id)] = {"active": active_count, "total": total_count}
+
+    # Active enrollments for this company
+    enrollments = (
+        db.query(EmailEnrollment)
+        .filter(
+            EmailEnrollment.company_id == company.id,
+            EmailEnrollment.status == "active",
+        )
+        .order_by(EmailEnrollment.next_send_at)
+        .limit(50)
+        .all()
+    )
+
+    # Queue stats
+    from sqlalchemy import func as sqlfunc
+    queue_pending = db.query(EmailQueue).filter(
+        EmailQueue.company_id == company.id,
+        EmailQueue.status == "pending",
+    ).count()
+    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    queue_sent_hour = db.query(EmailQueue).filter(
+        EmailQueue.company_id == company.id,
+        EmailQueue.status == "sent",
+        EmailQueue.created_at >= one_hour_ago,
+    ).count()
+    queue_failed = db.query(EmailQueue).filter(
+        EmailQueue.company_id == company.id,
+        EmailQueue.status == "failed",
+    ).count()
+
+    return templates.TemplateResponse("admin_automation.html", {
+        "request": request,
+        "company": company,
+        "company_slug": company_slug,
+        "sequences": sequences,
+        "seq_stats": seq_stats,
+        "enrollments": enrollments,
+        "queue_pending": queue_pending,
+        "queue_sent_hour": queue_sent_hour,
+        "queue_failed": queue_failed,
+    })
+
+
+@app.post("/{company_slug}/admin/automation/sequence/{seq_id}/toggle")
+def admin_toggle_sequence(
+    company_slug: str,
+    seq_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Enable/disable an email sequence."""
+    company = verify_company_access(company_slug, current_user)
+    import uuid as _uuid
+    seq = db.query(EmailSequence).filter(EmailSequence.id == _uuid.UUID(seq_id)).first()
+    if seq:
+        seq.is_active = not seq.is_active
+        db.commit()
+    return RedirectResponse(url=f"/{company_slug}/admin/automation", status_code=303)
+
+
+@app.post("/{company_slug}/admin/automation/enrollment/{enrollment_id}/cancel")
+def admin_cancel_enrollment(
+    company_slug: str,
+    enrollment_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cancel an active enrollment."""
+    company = verify_company_access(company_slug, current_user)
+    import uuid as _uuid
+    enrollment = db.query(EmailEnrollment).filter(
+        EmailEnrollment.id == _uuid.UUID(enrollment_id),
+        EmailEnrollment.company_id == company.id,
+    ).first()
+    if enrollment:
+        enrollment.status = "cancelled"
+        db.commit()
+    return RedirectResponse(url=f"/{company_slug}/admin/automation", status_code=303)
 
 
 @app.get("/{company_slug}/admin/job/{token}", response_class=HTMLResponse)
@@ -4154,6 +4341,23 @@ def admin_approve_job(
                 company_phone=company.phone or "",
                 company_email=company.email or "",
                 smtp_config=company_smtp,
+                company_id=company.id,
+                job_id=job.id,
+            )
+
+            # Enroll in quote follow-up sequence
+            from app.email_engine import enroll_in_sequence
+            background_tasks.add_task(
+                enroll_in_sequence,
+                trigger_event="quote_approved",
+                to_email=job.customer_email,
+                context={
+                    "customer_name": job.customer_name or "",
+                    "company_name": company.company_name,
+                    "quote_url": booking_url,
+                    "company_phone": company.phone or "",
+                    "company_email": company.email or "",
+                },
                 company_id=company.id,
                 job_id=job.id,
             )
@@ -4334,6 +4538,23 @@ def admin_quick_approve(
                 company_phone=company.phone or "",
                 company_email=company.email or "",
                 smtp_config=company_smtp,
+                company_id=company.id,
+                job_id=job.id,
+            )
+
+            # Enroll in quote follow-up sequence
+            from app.email_engine import enroll_in_sequence
+            background_tasks.add_task(
+                enroll_in_sequence,
+                trigger_event="quote_approved",
+                to_email=job.customer_email,
+                context={
+                    "customer_name": job.customer_name or "",
+                    "company_name": company.company_name,
+                    "quote_url": booking_url,
+                    "company_phone": company.phone or "",
+                    "company_email": company.email or "",
+                },
                 company_id=company.id,
                 job_id=job.id,
             )

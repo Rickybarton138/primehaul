@@ -27,6 +27,7 @@
     .badge-sent{background:rgba(46,229,157,.15);color:#2ee59d;}
     .badge-failed{background:rgba(255,77,79,.15);color:#ff4d4f;}
     .badge-skipped{background:rgba(255,193,7,.15);color:#ffc107;}
+    .badge-queued{background:rgba(96,165,250,.15);color:#60a5fa;}
     .type-badge{background:rgba(96,165,250,.12);color:#60a5fa;}
     .connection-banner{padding:14px 16px;border-radius:8px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:14px;}
     .connection-connected{background:rgba(46,229,157,.08);border:1px solid rgba(46,229,157,.25);color:#2ee59d;}
@@ -112,6 +113,10 @@
           <option value="marketplace_bid" {{ 'selected' if filter_type == 'marketplace_bid' }}>Marketplace Bid</option>
           <option value="marketplace_awarded" {{ 'selected' if filter_type == 'marketplace_awarded' }}>Marketplace Awarded</option>
           <option value="manual" {{ 'selected' if filter_type == 'manual' }}>Manual</option>
+          <option value="sequence_quote-follow-up" {{ 'selected' if filter_type == 'sequence_quote-follow-up' }}>Quote Follow-Up</option>
+          <option value="sequence_survey-nudge" {{ 'selected' if filter_type == 'sequence_survey-nudge' }}>Survey Nudge</option>
+          <option value="sequence_onboarding-drip" {{ 'selected' if filter_type == 'sequence_onboarding-drip' }}>Onboarding</option>
+          <option value="sequence_post-move-review" {{ 'selected' if filter_type == 'sequence_post-move-review' }}>Review Request</option>
         </select>
         <select name="status">
           <option value="">All Statuses</option>

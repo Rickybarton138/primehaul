@@ -11,6 +11,7 @@ All emails are logged to the email_logs table for company dashboard visibility.
 
 import logging
 import smtplib
+from smtplib import SMTPRecipientsRefused
 import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -80,6 +81,41 @@ def _log_email(
         logger.exception("[EMAIL-LOG] Failed to write email log entry")
 
 
+def _record_bounce(email: str, smtp_code: int):
+    """Record a bounce event. Hard bounce (5xx) or 3+ soft bounces → suppress."""
+    try:
+        from app.database import SessionLocal
+        from app.models import EmailBounce
+
+        db = SessionLocal()
+        try:
+            bounce = db.query(EmailBounce).filter(EmailBounce.email == email).first()
+            is_hard = smtp_code >= 500
+            if bounce:
+                bounce.bounce_count += 1
+                bounce.last_bounced_at = datetime.utcnow()
+                if is_hard:
+                    bounce.bounce_type = "hard"
+                    bounce.suppressed = True
+                elif bounce.bounce_count >= 3:
+                    bounce.suppressed = True
+            else:
+                bounce = EmailBounce(
+                    email=email,
+                    bounce_type="hard" if is_hard else "soft",
+                    bounce_count=1,
+                    suppressed=is_hard,
+                )
+                db.add(bounce)
+            db.commit()
+            logger.info("[EMAIL-BOUNCE] Recorded %s bounce for %s (code %d, suppressed=%s)",
+                        "hard" if is_hard else "soft", email, smtp_code, bounce.suppressed)
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("[EMAIL-BOUNCE] Failed to record bounce for %s", email)
+
+
 def send_email(
     to_email: str,
     subject: str,
@@ -93,6 +129,7 @@ def send_email(
     company_id=None,
     job_id=None,
     marketplace_job_id=None,
+    skip_log: bool = False,
 ) -> bool:
     """
     Send an email using SMTP
@@ -142,7 +179,8 @@ def send_email(
     # Skip if SMTP not configured (development mode)
     if not config["username"] or not config["password"]:
         logger.info("[EMAIL] SMTP not configured. Would send to %s: %s", to_email, subject)
-        _log_email(**log_kwargs, status="skipped")
+        if not skip_log:
+            _log_email(**log_kwargs, status="skipped")
         return True
 
     try:
@@ -177,12 +215,23 @@ def send_email(
 
         source = "company SMTP" if using_company_smtp else "PrimeHaul SMTP"
         logger.info("[EMAIL] Sent via %s to %s: %s", source, to_email, subject)
-        _log_email(**log_kwargs, status="sent")
+        if not skip_log:
+            _log_email(**log_kwargs, status="sent")
         return True
+
+    except SMTPRecipientsRefused as e:
+        # Classify bounce type from SMTP response codes
+        for addr, (code, _msg) in e.recipients.items():
+            _record_bounce(str(addr), code)
+        logger.warning("[EMAIL] Recipient refused (bounce) %s: %s", to_email, e)
+        if not skip_log:
+            _log_email(**log_kwargs, status="failed", error_message=f"Bounce: {e}")
+        return False
 
     except Exception as e:
         logger.exception("[EMAIL] Failed to send to %s: %s", to_email, subject)
-        _log_email(**log_kwargs, status="failed", error_message=str(e))
+        if not skip_log:
+            _log_email(**log_kwargs, status="failed", error_message=str(e))
         return False
 
 

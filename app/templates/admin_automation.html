@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0b0b0c" id="themeColor"/>
+  <title>Email Automation — {{ company.company_name }}</title>
+  <link rel="stylesheet" href="/static/app.css?v=7"/>
+  <script>
+    (function(){
+      var stored = localStorage.getItem('ph-admin-theme');
+      if(stored === 'light') document.documentElement.classList.add('light-mode');
+    })();
+  </script>
+  <style>
+    .auto-stats{display:flex;gap:12px;margin-bottom:20px;}
+    .stat-card{flex:1;padding:16px;border-radius:10px;text-align:center;border:1px solid var(--hair);}
+    .stat-card .num{font-size:28px;font-weight:800;margin-bottom:2px;}
+    .stat-card .label{font-size:12px;color:var(--muted);}
+    .seq-card{padding:16px;border:1px solid var(--hair);border-radius:10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .seq-info{flex:1;}
+    .seq-name{font-weight:700;font-size:15px;margin-bottom:2px;}
+    .seq-meta{font-size:12px;color:var(--muted);}
+    .seq-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+    .badge-active{background:rgba(46,229,157,.15);color:#2ee59d;}
+    .badge-paused{background:rgba(255,193,7,.15);color:#ffc107;}
+    .toggle-btn{padding:8px 16px;border-radius:6px;border:1px solid var(--hair);background:rgba(255,255,255,.03);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .toggle-btn:hover{background:rgba(255,255,255,.08);}
+    .enroll-table{width:100%;border-collapse:collapse;font-size:13px;}
+    .enroll-table th{text-align:left;padding:10px 8px;border-bottom:2px solid var(--hair);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+    .enroll-table td{padding:10px 8px;border-bottom:1px solid var(--hair);vertical-align:top;}
+    .enroll-table tr:hover{background:rgba(255,255,255,.02);}
+    .cancel-btn{padding:4px 10px;border-radius:4px;border:1px solid rgba(255,77,79,.3);background:rgba(255,77,79,.1);color:#ff4d4f;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .cancel-btn:hover{background:rgba(255,77,79,.2);}
+    .empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
+    .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.4;}
+    @media(max-width:600px){
+      .auto-stats{flex-direction:column;}
+      .seq-card{flex-direction:column;align-items:flex-start;}
+      .enroll-table{font-size:12px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="nav">
+      <div class="nav-inner">
+        <a href="/{{ company_slug }}/admin/dashboard" style="font-size:20px;text-decoration:none;">&#8592;</a>
+        <div class="nav-center">
+          <div>{{ company.company_name }}</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:400;">Email Automation</div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="screen">
+
+      <!-- Queue Stats -->
+      <div class="auto-stats">
+        <div class="stat-card">
+          <div class="num" style="color:#60a5fa;">{{ queue_pending }}</div>
+          <div class="label">Queued</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" style="color:#2ee59d;">{{ queue_sent_hour }}</div>
+          <div class="label">Sent (1h)</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" style="color:#ff4d4f;">{{ queue_failed }}</div>
+          <div class="label">Failed</div>
+        </div>
+      </div>
+
+      <!-- Sequences -->
+      <div class="group">
+        <div class="rowhead">
+          <div class="rowtitle">Sequences</div>
+          <div class="rowsub">{{ sequences|length }} configured</div>
+        </div>
+
+        {% for seq in sequences %}
+        <div class="seq-card">
+          <div class="seq-info">
+            <div class="seq-name">{{ seq.name }}</div>
+            <div class="seq-meta">
+              Trigger: <strong>{{ seq.trigger_event }}</strong>
+              &middot; {{ seq.steps|length }} steps
+              &middot; {{ seq_stats[seq.id|string].active }} active / {{ seq_stats[seq.id|string].total }} total enrollments
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            {% if seq.is_active %}
+              <span class="seq-badge badge-active">Active</span>
+            {% else %}
+              <span class="seq-badge badge-paused">Paused</span>
+            {% endif %}
+            <form method="post" action="/{{ company_slug }}/admin/automation/sequence/{{ seq.id }}/toggle" style="margin:0;">
+              <button type="submit" class="toggle-btn">
+                {{ 'Pause' if seq.is_active else 'Activate' }}
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Active Enrollments -->
+      <div class="group" style="margin-top:20px;">
+        <div class="rowhead">
+          <div class="rowtitle">Active Enrollments</div>
+          <div class="rowsub">{{ enrollments|length }} active</div>
+        </div>
+
+        {% if enrollments|length > 0 %}
+        <div style="overflow-x:auto;">
+          <table class="enroll-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Sequence</th>
+                <th>Step</th>
+                <th>Next Send</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in enrollments %}
+              <tr>
+                <td>{{ e.to_email }}</td>
+                <td>{{ e.sequence.name }}</td>
+                <td>{{ e.current_step + 1 }} / {{ e.sequence.steps|length }}</td>
+                <td style="white-space:nowrap;color:var(--muted);font-size:12px;">
+                  {{ e.next_send_at.strftime('%d %b %H:%M') if e.next_send_at else '—' }}
+                </td>
+                <td>
+                  <form method="post" action="/{{ company_slug }}/admin/automation/enrollment/{{ e.id }}/cancel" style="margin:0;">
+                    <button type="submit" class="cancel-btn">Cancel</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="icon">&#129302;</div>
+          <div style="font-weight:600;margin-bottom:4px;">No active enrollments</div>
+          <div style="font-size:13px;">When customers receive quotes or surveys, they'll automatically be enrolled in follow-up sequences.</div>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      var theme = localStorage.getItem('ph-admin-theme') || 'dark';
+      if(theme === 'light'){
+        document.documentElement.classList.add('light-mode');
+        document.body.classList.add('light-mode');
+      }
+    })();
+  </script>
+</body>
+</html>

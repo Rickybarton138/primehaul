@@ -1028,6 +1028,123 @@ class EmailLog(Base):
     marketplace_job = relationship("MarketplaceJob")
 
 
+class EmailTemplate(Base):
+    """Reusable email templates with {{var}} placeholders."""
+    __tablename__ = "email_templates"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug = Column(String(100), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
+    subject = Column(String(500), nullable=False)
+    body_html = Column(Text, nullable=False)
+    email_category = Column(String(50), nullable=False, default="follow_up")  # transactional / follow_up / marketing
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class EmailSequence(Base):
+    """Automation sequence definition."""
+    __tablename__ = "email_sequences"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug = Column(String(100), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
+    trigger_event = Column(String(100), nullable=False)  # quote_approved / company_onboarded / survey_invitation_sent / job_completed
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    steps = relationship("EmailSequenceStep", back_populates="sequence", order_by="EmailSequenceStep.step_order")
+
+
+class EmailSequenceStep(Base):
+    """Step within an email sequence."""
+    __tablename__ = "email_sequence_steps"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sequence_id = Column(UUID(as_uuid=True), ForeignKey("email_sequences.id", ondelete="CASCADE"), nullable=False)
+    template_id = Column(UUID(as_uuid=True), ForeignKey("email_templates.id", ondelete="CASCADE"), nullable=False)
+    step_order = Column(Integer, nullable=False)
+    delay_minutes = Column(Integer, nullable=False, default=0)
+
+    sequence = relationship("EmailSequence", back_populates="steps")
+    template = relationship("EmailTemplate")
+
+
+class EmailEnrollment(Base):
+    """Tracks a recipient through a sequence."""
+    __tablename__ = "email_enrollments"
+    __table_args__ = (
+        Index('idx_enrollments_status_next', 'status', 'next_send_at'),
+        Index('idx_enrollments_email_seq', 'to_email', 'sequence_id'),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sequence_id = Column(UUID(as_uuid=True), ForeignKey("email_sequences.id", ondelete="CASCADE"), nullable=False)
+    to_email = Column(String(255), nullable=False)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
+    context_json = Column(JSONB, default=dict)
+    current_step = Column(Integer, nullable=False, default=0)
+    status = Column(String(20), nullable=False, default="active")  # active / completed / cancelled
+    next_send_at = Column(DateTime(timezone=True))
+    enrolled_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    sequence = relationship("EmailSequence")
+    company = relationship("Company")
+
+
+class EmailQueue(Base):
+    """Queued emails for background sending."""
+    __tablename__ = "email_queue"
+    __table_args__ = (
+        Index('idx_queue_status_send', 'status', 'send_at'),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    to_email = Column(String(255), nullable=False)
+    subject = Column(String(500), nullable=False)
+    body_html = Column(Text, nullable=False)
+    email_type = Column(String(50), nullable=False, default="sequence")
+    email_category = Column(String(50), nullable=False, default="follow_up")
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True)
+    enrollment_id = Column(UUID(as_uuid=True), ForeignKey("email_enrollments.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String(20), nullable=False, default="pending")  # pending / sent / failed / suppressed
+    send_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    attempts = Column(Integer, nullable=False, default=0)
+    max_attempts = Column(Integer, nullable=False, default=5)
+    last_error = Column(Text)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    company = relationship("Company")
+
+
+class EmailPreference(Base):
+    """GDPR opt-out tracking per email address."""
+    __tablename__ = "email_preferences"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), nullable=False, unique=True)
+    unsubscribed_categories = Column(JSONB, default=list)  # e.g. ["marketing", "follow_up"]
+    unsubscribed_all = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class EmailBounce(Base):
+    """Bounce tracking per email address."""
+    __tablename__ = "email_bounces"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), nullable=False, unique=True)
+    bounce_type = Column(String(10), nullable=False, default="soft")  # hard / soft
+    bounce_count = Column(Integer, nullable=False, default=1)
+    suppressed = Column(Boolean, default=False)
+    first_bounced_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_bounced_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class SocialConfig(Base):
     """Singleton config for social media auto-pilot."""
     __tablename__ = "social_config"

@@ -249,5 +249,52 @@
             <p>&copy; 2026 PrimeHaul — An intelligent move.</p>
         </div>
     </div>
+
+<script>
+(function(){
+  var smtpLookup = {
+    'gmail.com':       {host:'smtp.gmail.com',         port:587},
+    'googlemail.com':  {host:'smtp.gmail.com',         port:587},
+    'outlook.com':     {host:'smtp.office365.com',     port:587},
+    'hotmail.com':     {host:'smtp.office365.com',     port:587},
+    'hotmail.co.uk':   {host:'smtp.office365.com',     port:587},
+    'live.com':        {host:'smtp.office365.com',     port:587},
+    'live.co.uk':      {host:'smtp.office365.com',     port:587},
+    'yahoo.com':       {host:'smtp.mail.yahoo.com',    port:587},
+    'yahoo.co.uk':     {host:'smtp.mail.yahoo.com',    port:587},
+    'zoho.com':        {host:'smtp.zoho.com',          port:587},
+    'zoho.eu':         {host:'smtp.zoho.eu',           port:587},
+    'btinternet.com':  {host:'mail.btinternet.com',    port:587},
+    'btopenworld.com': {host:'mail.btinternet.com',    port:587},
+    'sky.com':         {host:'smtp.sky.com',           port:587},
+    'icloud.com':      {host:'smtp.mail.me.com',       port:587},
+    'me.com':          {host:'smtp.mail.me.com',       port:587},
+    'aol.com':         {host:'smtp.aol.com',           port:587},
+    'virginmedia.com': {host:'smtp.virginmedia.com',   port:587},
+    'talktalk.net':    {host:'smtp.talktalk.net',      port:587}
+  };
+
+  var usernameField = document.getElementById('smtp_username');
+  var hostField     = document.getElementById('smtp_host');
+  var portField     = document.getElementById('smtp_port');
+
+  if(usernameField){
+    usernameField.addEventListener('blur', function(){
+      var val = this.value.trim();
+      var atIdx = val.indexOf('@');
+      if(atIdx < 0) return;
+      var domain = val.substring(atIdx + 1).toLowerCase();
+      var preset = smtpLookup[domain];
+      if(!preset) return;
+      if(!hostField.value.trim()){
+        hostField.value = preset.host;
+      }
+      if(!portField.value.trim() || portField.value === '587'){
+        portField.value = preset.port;
+      }
+    });
+  }
+})();
+</script>
 </body>
 </html>
