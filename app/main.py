@@ -292,18 +292,9 @@ def staging_auth_required(credentials: HTTPBasicCredentials = Depends(security) 
 # ============================================================================
 
 @app.get("/", response_class=HTMLResponse)
-async def gateway_page(request: Request):
+async def landing_page(request: Request):
     """
-    Gateway page: routes users to either PrimeHaul Leads (home movers)
-    or PrimeHaul OS (removal companies).
-    """
-    return templates.TemplateResponse("gateway.html", {"request": request})
-
-
-@app.get("/partner", response_class=HTMLResponse)
-async def partner_landing(request: Request):
-    """
-    B2B landing page for removal companies (PrimeHaul OS).
+    Main marketing landing page for primehaul.co.uk
     """
     return templates.TemplateResponse("landing_primehaul_uk.html", {"request": request})
 
