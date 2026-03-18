@@ -1,0 +1,91 @@
+# PrimeHaul OS
+
+> The operating system for UK removal companies. AI-powered survey tool, instant quoting, booking management, marketplace, and business automation -- all in one platform.
+
+## About
+
+PrimeHaul OS is a B2B SaaS platform purpose-built for UK removal companies. Each company gets a white-labelled customer survey tool where their clients upload room photos, and AI vision (GPT-4o) extracts a full furniture inventory with dimensions, weight, and cubic metres. Companies can then review, adjust pricing, approve quotes, accept deposits via Stripe, and manage bookings. The platform also includes a removal marketplace where consumers post jobs and companies bid competitively.
+
+## Key Facts
+
+- B2B SaaS for UK removal companies at GBP 99/month
+- 14-day free trial, no credit card required
+- White-labelled survey tool with custom branding (logo, colours)
+- AI vision inventory extraction from room photos (GPT-4o)
+- Built-in Stripe billing and payment processing
+- Marketplace with competitive bidding and 15% commission model
+- Voice guidance via OpenAI text-to-speech
+- ML learning system that improves item recognition over time
+- Hosted on Railway, built with FastAPI and PostgreSQL
+
+## Features
+
+### Customer Survey Tool
+- White-labelled survey URLs: /s/{company-slug}/{token}
+- Interactive Mapbox pickup/drop-off selection
+- Property type and access details (floors, lift, parking, steps)
+- Room-by-room photo upload with AI inventory extraction
+- Item variants and quantity adjustment
+- Bulk photo upload option
+- Packing services selection
+- Instant quote preview with detailed breakdown
+- Customer contact capture and submission
+
+### Quote and Booking Management
+- Company admin dashboard with job pipeline
+- Quote review, price adjustment, and approval workflow
+- Quick-approve for fast turnaround
+- Terms and conditions upload and digital acceptance
+- Deposit collection via Stripe Connect
+- Booking confirmation with SMS and email notifications
+- Admin notes per job
+
+### Business Tools
+- Custom pricing configuration (CBM rates, distance rates, access surcharges)
+- Company branding (logo upload, colour scheme)
+- Company details management
+- Analytics dashboard with conversion metrics
+- Email automation with sequences and templates
+- Email preference management and unsubscribe handling
+- SMTP configuration for custom email sending
+- AI credit system for photo analysis
+- CBM calculator (free public tool / lead magnet)
+
+### Marketplace
+- Public marketplace for consumers to post removal jobs
+- Company bidding system with service area matching
+- Job broadcasting within radius
+- Commission-based revenue model (15%)
+- Bid management dashboard for companies
+
+### Platform Administration
+- Super admin dashboard with MRR, churn, and trial metrics
+- Company verification and partner status
+- ML learning management for item recognition
+- Activity monitoring and system health
+- Social media content generation and publishing
+- Sales CRM with lead import, cold email, and follow-up automation
+
+## Key Pages
+
+- Homepage: https://primehaul.co.uk/
+- Sign up (free trial): https://primehaul.co.uk/auth/signup
+- Login: https://primehaul.co.uk/auth/login
+- Marketplace: https://primehaul.co.uk/marketplace
+- CBM Calculator: https://primehaul.co.uk/tools/cbm-calculator
+- Contact: https://primehaul.co.uk/contact
+- Terms of service: https://primehaul.co.uk/terms
+- Privacy policy: https://primehaul.co.uk/privacy
+
+## Pricing
+
+- GBP 99 per month per company
+- 14-day free trial included
+- Stripe billing with self-service portal
+- AI credits for photo analysis (purchasable top-ups)
+- Marketplace commission: 15% on accepted bids
+
+## Contact
+
+- Website: https://primehaul.co.uk
+- Email: rickybarton138@btinternet.com
