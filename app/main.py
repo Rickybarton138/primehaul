@@ -291,6 +291,16 @@ def staging_auth_required(credentials: HTTPBasicCredentials = Depends(security) 
 # MARKETING & LANDING PAGE
 # ============================================================================
 
+@app.get("/BingSiteAuth.xml")
+async def bing_site_auth():
+    """Bing Webmaster Tools verification"""
+    content = """<?xml version="1.0"?>
+<users>
+	<user>CE59AEC8DEB21F303FBC0D31BE9D3A69</user>
+</users>"""
+    return Response(content=content, media_type="application/xml")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def landing_page(request: Request):
     """
