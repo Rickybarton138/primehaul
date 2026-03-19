@@ -1016,13 +1016,13 @@ def superadmin_dashboard(request: Request, db: Session = Depends(get_db)):
             Job.submitted_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)
         ).count()
 
-        # Revenue estimate (surveys beyond free tier * £9.99)
+        # Revenue estimate (surveys beyond free tier * £4.99)
         revenue_total = 0
         for c in companies:
             is_partner = getattr(c, 'is_partner', False) or False
             if not is_partner:
                 paid_surveys = max(0, (c.surveys_used or 0) - 3)
-                revenue_total += paid_surveys * 9.99
+                revenue_total += paid_surveys * 4.99
 
         stats = {
             "total_companies": len(companies),

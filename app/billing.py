@@ -19,7 +19,7 @@ load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")  # Legacy subscription price
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-STRIPE_SURVEY_PRICE_PENCE = 999  # £9.99 per survey
+STRIPE_SURVEY_PRICE_PENCE = 499  # £4.99 per survey
 
 logger = logging.getLogger(__name__)
 
@@ -172,10 +172,10 @@ def create_deposit_payment_intent(
 
 # Credit pack pricing (in pence)
 CREDIT_PACKS = {
-    "starter": {"credits": 10, "price_pence": 9900, "price_display": "£99", "per_survey": "£9.90"},
-    "growth": {"credits": 25, "price_pence": 22500, "price_display": "£225", "per_survey": "£9.00"},
-    "pro": {"credits": 50, "price_pence": 39900, "price_display": "£399", "per_survey": "£7.98"},
-    "enterprise": {"credits": 100, "price_pence": 69900, "price_display": "£699", "per_survey": "£6.99"},
+    "starter": {"credits": 10, "price_pence": 4900, "price_display": "£49", "per_survey": "£4.90"},
+    "growth": {"credits": 25, "price_pence": 11200, "price_display": "£112", "per_survey": "£4.48"},
+    "pro": {"credits": 50, "price_pence": 19900, "price_display": "£199", "per_survey": "£3.98"},
+    "enterprise": {"credits": 100, "price_pence": 34900, "price_display": "£349", "per_survey": "£3.49"},
 }
 
 
